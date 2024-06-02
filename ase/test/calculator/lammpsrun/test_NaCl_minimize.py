@@ -7,7 +7,7 @@ from ase.optimize import QuasiNewton
 from ase.spacegroup import crystal
 
 
-@pytest.mark.calculator_lite
+@pytest.mark.calculator_lite()
 @pytest.mark.calculator('lammpsrun')
 def test_NaCl_minimize(factory):
     a = 6.15
@@ -49,7 +49,7 @@ def test_NaCl_minimize(factory):
         nacl.get_potential_energy()
 
         ucf = UnitCellFilter(nacl)
-        with QuasiNewton(ucf, force_consistent=False) as dyn:
+        with QuasiNewton(ucf) as dyn:
             dyn.run(fmax=1.0E-2)
 
         assert_allclose(nacl.get_potential_energy(), -1897.208861729178,

@@ -1,14 +1,15 @@
+import re
+from collections import OrderedDict
+
+import numpy as np
+
+from ase import Atoms
+from ase.io import write
+
+
 def test_xsd_bond():
     # This writes xsd example with bond connectivity information, and checks
     # bond formats.
-
-    import re
-    from collections import OrderedDict
-
-    import numpy as np
-
-    from ase import Atoms
-    from ase.io import write
 
     # Example molecule
     atoms = Atoms('CH4', [[1.08288111e-09, 1.74602682e-09, -1.54703448e-09],
@@ -58,6 +59,6 @@ def test_xsd_bond():
             i = AtomIds.index(AtomId)
             j = AtomIds.index(OtherAtomId[0])
             Newconnectivitymatrix[i, j] = 1
-    for i in range(0, 4):
-        for j in range(0, 4):
+    for i in range(4):
+        for j in range(4):
             assert connectivitymatrix[i, j] == Newconnectivitymatrix[i, j]

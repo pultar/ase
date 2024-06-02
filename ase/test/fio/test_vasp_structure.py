@@ -42,7 +42,7 @@ class TestXdatcarRoundtrip(unittest.TestCase):
 
     def test_roundtrip(self):
         # Create a series of translated cells
-        trajectory = [self.NaCl.copy() for i in range(5)]
+        trajectory = [self.NaCl.copy() for _ in range(5)]
         for i, atoms in enumerate(trajectory):
             atoms.set_scaled_positions(
                 atoms.get_scaled_positions() + i * np.array([0.05, 0, 0.02])
@@ -69,21 +69,6 @@ class TestXdatcarRoundtrip(unittest.TestCase):
         with self.assertRaises(TypeError):
             not_traj = [True, False, False]
             ase.io.write(self.outfile, not_traj, format='vasp-xdatcar')
-
-
-def test_wrap():
-    atoms = ase.build.bulk('Ge')
-    # Shift atomic positions to get negative coordinates
-    atoms.wrap(center=(-1, -1, -1))
-
-    atoms.write('POSCAR', direct=True, wrap=False)
-    new_atoms = ase.io.read('POSCAR')
-    assert np.allclose(atoms.positions, new_atoms.positions)
-
-    atoms.write('POSCAR', direct=True, wrap=True)
-    new_atoms = ase.io.read('POSCAR')
-    atoms.wrap()
-    assert np.allclose(atoms.positions, new_atoms.positions)
 
 
 def test_index():

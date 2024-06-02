@@ -97,13 +97,20 @@ main:
       ase test
       --calculators asap,ff,lj,morse,tip3p,tip4p
       --coverage --pytest --color=yes --durations 20 -v -r s
+      --junit-xml=report.xml
       -W "ignore:The --rsyncdir command line argument"
       -W "ignore:NumPy will stop allowing conversion of out-of-bound Python integers"
+    - coverage xml --data-file ase/test/.coverage
     - mv ase/test/coverage-html coverage-main
     - mv ase/test/.coverage coverage-main/coverage.dat
   artifacts:
     paths:
       - coverage-main/
+    reports:
+      coverage_report:
+        coverage_format: cobertura
+        path: coverage.xml
+      junit: ase/test/report.xml
     expire_in: 1 week
 
 # Calculator integration tests which always run.
@@ -113,15 +120,24 @@ calculators-lite:
   image: registry.gitlab.com/ase/ase:ase-full-monty
   script:
     - pip install --no-deps --editable .
+    - export ASE_CONFIG_PATH=/home/ase/aseconfig.ini
+    - sed 's/binary = /command = /' -i /home/ase/aseconfig.ini
     - >
       ase test calculator --calculators=auto --coverage
       --pytest -m calculator_lite --color=yes --durations=20 -v
+      --junit-xml=report.xml -r s
       -W "ignore:The --rsyncdir command line argument"
+    - coverage xml --data-file ase/test/.coverage
     - mv ase/test/coverage-html coverage-calculators-lite
     - mv ase/test/.coverage coverage-calculators-lite/coverage.dat
   artifacts:
     paths:
       - coverage-calculators-lite/
+    reports:
+      coverage_report:
+        coverage_format: cobertura
+        path: coverage.xml
+      junit: ase/test/report.xml
     expire_in: 1 week
 
 # Plan: Test as many calculators as possible as well as possible.
@@ -134,17 +150,29 @@ calculators:
   image: registry.gitlab.com/ase/ase:ase-full-monty
   script:
     - pip install --no-deps --editable .
+    - export ASE_CONFIG_PATH=/home/ase/aseconfig.ini
+    - sed 's/binary = /command = /' -i /home/ase/aseconfig.ini
     - ase info --calculators
     - >
       ase test calculator --calculators abinit,asap,cp2k,dftb,espresso,gpaw,kim,lammpslib,lammpsrun,mopac,nwchem,octopus,siesta
-      --coverage --pytest --color=yes --durations 20
+      --coverage --pytest --color=yes --durations 20 --junit-xml=report.xml
       -W "ignore:The --rsyncdir command line argument"
+    - coverage xml --data-file ase/test/.coverage
     - mv ase/test/coverage-html coverage-calculators
     - mv ase/test/.coverage coverage-calculators/coverage.dat
-  when: manual
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "push"
+      when: manual
+      allow_failure: true
+    - if: $CI_PIPELINE_SOURCE == "schedule"
   artifacts:
     paths:
       - coverage-calculators/
+    reports:
+      coverage_report:
+        coverage_format: cobertura
+        path: coverage.xml
+      junit: ase/test/report.xml
     expire_in: 1 week
 
 doc:
@@ -225,15 +253,9 @@ coverage-combine:
       - coverage-html
     expire_in: 1 week
 
-.shared_windows_runners:
-  tags:
-    - shared-windows
-    - windows
-    - windows-1809
-
 windows_test:
-  extends:
-    - .shared_windows_runners
+  tags:
+    - saas-windows-medium-amd64
   stage: test
   before_script:
     # https://stackoverflow.com/questions/61791108/gitlab-ci-shared-windows-runner-for-python
@@ -253,4 +275,7 @@ windows_test:
       -W "ignore:The --rsyncdir command line argument"
       -W "ignore:NumPy will stop allowing conversion of out-of-bound Python integers"
   rules:
+    - if: $CI_PIPELINE_SOURCE == "push"
+      when: manual
+      allow_failure: true
     - if: $CI_PIPELINE_SOURCE == "schedule"

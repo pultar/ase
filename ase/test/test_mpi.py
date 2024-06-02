@@ -3,6 +3,16 @@ from subprocess import run
 
 import pytest
 
+from ase.parallel import world
+
+
+def test_mpi():
+    x = 42.0
+    with pytest.warns(FutureWarning):
+        x = world.sum(x)
+    x = world.sum_scalar(x)
+    assert x == 42 * world.size
+
 
 @pytest.mark.skip(reason='Does not work and no time to investigate.')
 def test_mpi_unused_on_import():

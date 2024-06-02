@@ -167,10 +167,7 @@ class Formula:
 
         if fmt == 'hill':
             count = self.count()
-            count2 = {}
-            for symb in 'CH':
-                if symb in count:
-                    count2[symb] = count.pop(symb)
+            count2 = {symb: count.pop(symb) for symb in 'CH' if symb in count}
             for symb, n in sorted(count.items()):
                 count2[symb] = n
             return dict2str(count2)
@@ -515,7 +512,7 @@ non_metals = ['H', 'He', 'B', 'C', 'N', 'O', 'F', 'Ne',
               'Po', 'At', 'Rn']
 
 
-@lru_cache()
+@lru_cache
 def periodic_table_order() -> Dict[str, int]:
     """Create dict for sorting after period first then row."""
     return {symbol: n for n, symbol in enumerate(chemical_symbols[87:] +

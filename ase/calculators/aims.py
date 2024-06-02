@@ -12,10 +12,9 @@ import re
 
 import numpy as np
 
-from ase.calculators.genericfileio import (
-    CalculatorTemplate,
-    GenericFileIOCalculator,
-)
+from ase.calculators.genericfileio import (BaseProfile, CalculatorTemplate,
+                                           GenericFileIOCalculator,
+                                           read_stdout)
 from ase.io.aims import write_aims, write_control
 
 
@@ -24,21 +23,23 @@ def get_aims_version(string):
     return match.group(1)
 
 
-class AimsProfile:
-    def __init__(self, argv):
-        if isinstance(argv, str):
-            argv = argv.split()
+class AimsProfile(BaseProfile):
+    configvars = {'default_species_directory'}
 
-        self.argv = argv
+    def __init__(self, command, default_species_directory=None, **kwargs):
+        super().__init__(command, **kwargs)
+        self.default_species_directory = default_species_directory
 
-    def run(self, directory, outputname):
-        from subprocess import check_call
+    def get_calculator_command(self, inputfile):
+        return []
 
-        with open(directory / outputname, 'w') as fd:
-            check_call(self.argv, stdout=fd, cwd=directory, env=os.environ)
+    def version(self):
+        return get_aims_version(read_stdout(self._split_command))
 
 
 class AimsTemplate(CalculatorTemplate):
+    _label = 'aims'
+
     def __init__(self):
         super().__init__(
             'aims',
@@ -53,7 +54,8 @@ class AimsTemplate(CalculatorTemplate):
             ],
         )
 
-        self.outputname = 'aims.out'
+        self.outputname = f'{self._label}.out'
+        self.errorname = f'{self._label}.err'
 
     def update_parameters(self, properties, parameters):
         """Check and update the parameters to match the desired calculation
@@ -91,7 +93,7 @@ class AimsTemplate(CalculatorTemplate):
 
         return parameters
 
-    def write_input(self, directory, atoms, parameters, properties):
+    def write_input(self, profile, directory, atoms, parameters, properties):
         """Write the geometry.in and control.in files for the calculation
 
         Parameters
@@ -143,10 +145,18 @@ class AimsTemplate(CalculatorTemplate):
         )
 
         control = directory / 'control.in'
+
+        if (
+            'species_dir' not in parameters
+            and profile.default_species_directory is not None
+        ):
+            parameters['species_dir'] = profile.default_species_directory
+
         write_control(control, atoms, parameters)
 
     def execute(self, directory, profile):
-        profile.run(directory, self.outputname)
+        profile.run(directory, None, self.outputname,
+                    errorfile=self.errorname)
 
     def read_results(self, directory):
         from ase.io.aims import read_aims_results
@@ -154,21 +164,29 @@ class AimsTemplate(CalculatorTemplate):
         dst = directory / self.outputname
         return read_aims_results(dst, index=-1)
 
+    def load_profile(self, cfg, **kwargs):
+        return AimsProfile.from_config(cfg, self.name, **kwargs)
+
     def socketio_argv(self, profile, unixsocket, port):
-        return [*profile.argv]
+        return []
 
     def socketio_parameters(self, unixsocket, port):
         if port:
-            use_pimd_wrapper = (('localhost', port),)
+            use_pimd_wrapper = ('localhost', port)
         else:
             # (INET port number should be unused.)
-            use_pimd_wrapper = ((f'UNIX:{unixsocket}', 31415),)
+            use_pimd_wrapper = (f'UNIX:{unixsocket}', 31415)
 
         return dict(use_pimd_wrapper=use_pimd_wrapper, compute_forces=True)
 
 
 class Aims(GenericFileIOCalculator):
-    def __init__(self, profile=None, directory='.', **kwargs):
+    def __init__(
+        self,
+        profile=None,
+        directory='.',
+        **kwargs,
+    ):
         """Construct the FHI-aims calculator.
 
         The keyword arguments (kwargs) can be one of the ASE standard
@@ -191,13 +209,6 @@ class Aims(GenericFileIOCalculator):
             Any of the base class arguments.
 
         """
-
-        if profile is None:
-            profile = AimsProfile(
-                kwargs.pop(
-                    'aims_command', os.getenv('ASE_AIMS_COMMAND', 'aims.x')
-                )
-            )
 
         super().__init__(
             template=AimsTemplate(),

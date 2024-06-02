@@ -5,7 +5,7 @@ import warnings
 from abc import ABC, abstractmethod
 
 import numpy as np
-from scipy.integrate import cumtrapz
+from scipy.integrate import cumulative_trapezoid
 from scipy.interpolate import CubicSpline
 
 import ase.parallel
@@ -15,7 +15,7 @@ from ase.calculators.singlepoint import SinglePointCalculator
 from ase.geometry import find_mic
 from ase.optimize import MDMin
 from ase.optimize.ode import ode12r
-from ase.optimize.optimize import Optimizer
+from ase.optimize.optimize import DEFAULT_MAX_STEPS, Optimizer
 from ase.optimize.precon import Precon, PreconImages
 from ase.optimize.sciopt import OptimizerConvergenceError
 from ase.utils import deprecated, lazyproperty
@@ -264,9 +264,8 @@ class NEBOptimizable(Optimizable):
     def get_forces(self):
         return self.neb.get_forces()
 
-    def get_potential_energy(self, force_consistent):
-        return self.neb.get_potential_energy(
-            force_consistent=force_consistent)
+    def get_potential_energy(self):
+        return self.neb.get_potential_energy()
 
     def is_neb(self):
         return True
@@ -390,6 +389,11 @@ class BaseNEB:
                 "directly call the idpp_interpolate function from ase.mep")
     def idpp_interpolate(self, traj='idpp.traj', log='idpp.log', fmax=0.1,
                          optimizer=MDMin, mic=False, steps=100):
+        """
+        .. deprecated:: 3.23.0
+            Please use :class:`~ase.mep.NEB`'s ``interpolate(method='idpp')``
+            method
+        """
         idpp_interpolate(self, traj=traj, log=log, fmax=fmax,
                          optimizer=optimizer, mic=mic, steps=steps)
 
@@ -544,10 +548,8 @@ class BaseNEB:
             raise RuntimeError("get_residual() called before get_forces()")
         return np.max(self.residuals)
 
-    def get_potential_energy(self, force_consistent=False):
-        """Return the maximum potential energy along the band.
-        Note that the force_consistent keyword is ignored and is only
-        present for compatibility with ase.Atoms.get_potential_energy."""
+    def get_potential_energy(self):
+        """Return the maximum potential energy along the band."""
         return self.emax
 
     def set_calculators(self, calculators):
@@ -644,7 +646,7 @@ class BaseNEB:
         s = np.linspace(0.0, 1.0, spline_points, endpoint=True)
         dE = f(s) * fit.dx_ds(s)
         F = dE.sum(axis=1)
-        E = -cumtrapz(F, s, initial=0.0)
+        E = -cumulative_trapezoid(F, s, initial=0.0)
         return s, E, F
 
 
@@ -865,8 +867,7 @@ class NEBOptimizer(Optimizer):
         super().__init__(atoms=neb, restart=restart,
                          logfile=logfile, trajectory=trajectory,
                          master=master,
-                         append_trajectory=append_trajectory,
-                         force_consistent=False)
+                         append_trajectory=append_trajectory)
         self.neb = neb
 
         method = method.lower()
@@ -929,7 +930,7 @@ class NEBOptimizer(Optimizer):
 
     def run_static(self, fmax):
         X = self.neb.get_positions().reshape(-1)
-        for step in range(self.max_steps):
+        for _ in range(self.max_steps):
             F = self.force_function(X)
             if self.neb.get_residual() <= fmax:
                 return True
@@ -937,7 +938,7 @@ class NEBOptimizer(Optimizer):
             self.callback(X)
         return False
 
-    def run(self, fmax=0.05, steps=None, method=None):
+    def run(self, fmax=0.05, steps=DEFAULT_MAX_STEPS, method=None):
         """
         Optimize images to obtain the minimum energy path
 
@@ -946,8 +947,7 @@ class NEBOptimizer(Optimizer):
         fmax - desired force tolerance
         steps - maximum number of steps
         """
-        if steps:
-            self.max_steps = steps
+        self.max_steps = steps
         if method is None:
             method = self.method
         if method == 'ode':
@@ -1003,6 +1003,11 @@ class IDPP(Calculator):
 @deprecated("SingleCalculatorNEB is deprecated. "
             "Please use NEB(allow_shared_calculator=True) instead.")
 class SingleCalculatorNEB(NEB):
+    """
+    .. deprecated:: 3.23.0
+        Please use ``NEB(allow_shared_calculator=True)`` instead
+    """
+
     def __init__(self, images, *args, **kwargs):
         kwargs["allow_shared_calculator"] = True
         super().__init__(images, *args, **kwargs)
@@ -1108,6 +1113,10 @@ class NEBTools:
     @deprecated('NEBTools.get_fit() is deprecated.  '
                 'Please use ase.utils.forcecurve.fit_images(images).')
     def get_fit(self):
+        """
+        .. deprecated:: 3.23.0
+            Please use ``ase.utils.forcecurve.fit_images(images)``
+        """
         return fit_images(self.images)
 
     def get_barrier(self, fit=True, raw=False):
@@ -1215,7 +1224,7 @@ class NEBTools:
         # Sanity check that the energies of the last images line up too.
         e_last = self.images[nimages - 1].get_potential_energy()
         e_nextlast = self.images[2 * nimages - 1].get_potential_energy()
-        if not (e_last == e_nextlast):
+        if e_last != e_nextlast:
             raise RuntimeError('Could not guess number of images per band.')
         sys.stdout.write('Number of images per band guessed to be {:d}.\n'
                          .format(nimages))
@@ -1225,14 +1234,17 @@ class NEBTools:
 class NEBtools(NEBTools):
     @deprecated('NEBtools has been renamed; please use NEBTools.')
     def __init__(self, images):
+        """
+        .. deprecated:: 3.23.0
+            Please use :class:`~ase.mep.NEBTools`.
+        """
         NEBTools.__init__(self, images)
 
 
 @deprecated('Please use NEBTools.plot_band_from_fit.')
 def plot_band_from_fit(s, E, Sfit, Efit, lines, ax=None):
+    """
+    .. deprecated:: 3.23.0
+        Please use :meth:`NEBTools.plot_band_from_fit`.
+    """
     NEBTools.plot_band_from_fit(s, E, Sfit, Efit, lines, ax=None)
-
-
-def fit0(*args, **kwargs):
-    raise DeprecationWarning('fit0 is deprecated. Use `fit_raw` from '
-                             '`ase.utils.forcecurve` instead.')

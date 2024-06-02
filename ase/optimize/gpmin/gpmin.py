@@ -14,9 +14,10 @@ from ase.parallel import world
 class GPMin(Optimizer, GaussianProcess):
     def __init__(self, atoms, restart=None, logfile='-', trajectory=None,
                  prior=None, kernel=None, master=None, noise=None, weight=None,
-                 scale=None, force_consistent=None, batch_size=None,
+                 scale=None, force_consistent=Optimizer._deprecated,
+                 batch_size=None,
                  bounds=None, update_prior_strategy="maximum",
-                 update_hyperparams=False):
+                 update_hyperparams=False, comm=world):
         """Optimize atomic positions using GPMin algorithm, which uses both
         potential energies and forces information to build a PES via Gaussian
         Process (GP) regression and then minimizes it.
@@ -63,12 +64,6 @@ class GPMin(Optimizer, GaussianProcess):
         master: boolean
             Defaults to None, which causes only rank 0 to save files. If
             set to True, this rank will save files.
-
-        force_consistent: boolean or None
-            Use force-consistent energy calls (as opposed to the energy
-            extrapolated to 0 K). By default (force_consistent=None) uses
-            force-consistent energies if available in the calculator, but
-            falls back to force_consistent=False if not.
 
         prior: Prior object or None
             Prior for the GP regression of the PES surface
@@ -123,6 +118,9 @@ class GPMin(Optimizer, GaussianProcess):
             step.
             If bounds is False, no constraints are set in the optimization of
             the hyperparameters.
+
+        comm: Communicator object
+            Communicator to handle parallel file reading and writing.
 
         .. warning:: The memory of the optimizer scales as O(n²N²) where
                      N is the number of atoms and n the number of steps.
@@ -190,8 +188,9 @@ class GPMin(Optimizer, GaussianProcess):
         self.x_list = []      # Training set features
         self.y_list = []      # Training set targets
 
-        Optimizer.__init__(self, atoms, restart, logfile,
-                           trajectory, master, force_consistent)
+        Optimizer.__init__(self, atoms=atoms, restart=restart, logfile=logfile,
+                           trajectory=trajectory, master=master, comm=comm,
+                           force_consistent=force_consistent)
         if prior is None:
             self.update_prior = True
             prior = ConstantPrior(constant=None)
@@ -260,14 +259,13 @@ class GPMin(Optimizer, GaussianProcess):
         if f is None:
             f = optimizable.get_forces()
 
-        fc = self.force_consistent
         r0 = optimizable.get_positions().reshape(-1)
-        e0 = optimizable.get_potential_energy(force_consistent=fc)
+        e0 = optimizable.get_potential_energy()
         self.update(r0, e0, f)
 
         r1 = self.relax_model(r0)
         optimizable.set_positions(r1.reshape(-1, 3))
-        e1 = optimizable.get_potential_energy(force_consistent=fc)
+        e1 = optimizable.get_potential_energy()
         f1 = optimizable.get_forces()
         self.function_calls += 1
         self.force_calls += 1
@@ -277,7 +275,7 @@ class GPMin(Optimizer, GaussianProcess):
             r1 = self.relax_model(r0)
 
             optimizable.set_positions(r1.reshape(-1, 3))
-            e1 = optimizable.get_potential_energy(force_consistent=fc)
+            e1 = optimizable.get_potential_energy()
             f1 = optimizable.get_forces()
             self.function_calls += 1
             self.force_calls += 1

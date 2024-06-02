@@ -38,6 +38,7 @@ def _base_calculator_gpwfile(tmp_path_factory, factories):
         import gpaw
         gpw_path = tmp_path_factory.mktemp('sub') / filename
         calc = gpaw.GPAW(
+            mode='fd',
             gpts=gpts,
             nbands=nbands,
             kpts={'size': kpts, 'gamma': True},
@@ -102,7 +103,7 @@ def ti_calculator(_ti_calculator_gpwfile):
     return gpaw.GPAW(_ti_calculator_gpwfile, txt=None)
 
 
-@pytest.fixture
+@pytest.fixture()
 def wan(rng, h2_calculator):
     def _wan(
         atoms=None,
@@ -144,6 +145,7 @@ def wan(rng, h2_calculator):
         if calc is None:
             gpaw = pytest.importorskip('gpaw')
             calc = gpaw.GPAW(
+                mode='fd',
                 gpts=gpts,
                 nbands=nwannier,
                 kpts=kpts,
@@ -291,7 +293,7 @@ def test_rotation_from_projection(rng):
     assert normalization_error(U_ww) < 1e-10, 'U_ww not normalized'
 
 
-@pytest.mark.calculator_lite
+@pytest.mark.calculator_lite()
 def test_save(tmpdir, wan):
     wanf = wan(nwannier=4, fixedstates=2, initialwannier='bloch')
     jsonfile = tmpdir.join('wanf.json')
@@ -337,12 +339,12 @@ def test_get_functional_value(fun, wan):
     assert f1 < f2
 
 
-@pytest.mark.calculator_lite
+@pytest.mark.calculator_lite()
 @calc('gpaw')
 def test_get_centers(factory):
     # Rough test on the position of the Wannier functions' centers
     gpaw = pytest.importorskip('gpaw')
-    calc = gpaw.GPAW(gpts=(32, 32, 32), nbands=4, txt=None)
+    calc = gpaw.GPAW(mode='fd', gpts=(32, 32, 32), nbands=4, txt=None)
     atoms = molecule('H2', calculator=calc)
     atoms.center(vacuum=3.)
     atoms.get_potential_energy()
@@ -429,11 +431,11 @@ def test_get_spectral_weight_random(wan, rng):
         assert wanf.get_spectral_weight(i).sum() == pytest.approx(1)
 
 
-@pytest.mark.calculator_lite
+@pytest.mark.calculator_lite()
 def test_get_pdos(wan):
     nwannier = 4
     gpaw = pytest.importorskip('gpaw')
-    calc = gpaw.GPAW(gpts=(16, 16, 16), nbands=nwannier, txt=None)
+    calc = gpaw.GPAW(mode='fd', gpts=(16, 16, 16), nbands=nwannier, txt=None)
     atoms = molecule('H2')
     atoms.center(vacuum=3.)
     atoms.calc = calc
@@ -690,7 +692,7 @@ def test_init_orbitals_h2(rng):
     ntot = 2
     orbs = init_orbitals(atoms=atoms, ntot=ntot, rng=rng)
     angular_momenta = [orb[1] for orb in orbs]
-    assert sum([l_ * 2 + 1 for l_ in angular_momenta]) == ntot
+    assert sum(l_ * 2 + 1 for l_ in angular_momenta) == ntot
     assert angular_momenta == [0] * ntot
 
 
@@ -701,7 +703,7 @@ def test_init_orbitals_ti(rng):
     ntot = 14
     orbs = init_orbitals(atoms=atoms, ntot=ntot, rng=rng)
     angular_momenta = [orb[1] for orb in orbs]
-    assert sum([l_ * 2 + 1 for l_ in angular_momenta]) == ntot
+    assert sum(l_ * 2 + 1 for l_ in angular_momenta) == ntot
     assert 0 in angular_momenta
     assert 2 in angular_momenta
 
@@ -744,7 +746,7 @@ def test_scdm(ti_calculator):
         assert normalization_error(C_kul[k]) < 1e-10, 'C_ul not normalized'
 
 
-@pytest.mark.xfail
+@pytest.mark.xfail()
 def test_get_optimal_nwannier(wan, si_calculator):
     """ Test method to compute the optimal 'nwannier' value. """
 
@@ -775,7 +777,7 @@ def test_get_optimal_nwannier(wan, si_calculator):
     assert opt_nw >= 0
 
 
-@pytest.mark.xfail
+@pytest.mark.xfail()
 def test_spread_contributions(wan):
     # Only a test on a constant value to make sure it does not deviate too much
     wan1 = wan()

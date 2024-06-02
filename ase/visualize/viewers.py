@@ -31,15 +31,10 @@ import sys
 import tempfile
 import warnings
 from contextlib import contextmanager
+from importlib import import_module
+from importlib.metadata import entry_points
 from io import BytesIO
 from pathlib import Path
-
-if sys.version_info >= (3, 8):
-    from importlib.metadata import entry_points
-else:
-    from importlib_metadata import entry_points
-
-from importlib import import_module
 
 from ase.io import write
 from ase.io.formats import ioformats
@@ -52,7 +47,7 @@ class UnknownViewerError(Exception):
 
 class AbstractViewer:
     def view(self, *args, **kwargss):
-        raise NotImplementedError()
+        raise NotImplementedError
 
 
 class PyViewer(AbstractViewer):
