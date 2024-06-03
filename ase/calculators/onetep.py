@@ -14,40 +14,30 @@ from ase.io import read, write
 
 class OnetepProfile(BaseProfile):
     """
-    ONETEP profile class, additional "old" parameter
-    is automatically passed for now if the user uses the
-    now deprecated "ASE_ONETEP_COMMAND".
+    ONETEP profile class.
     """
 
-    def __init__(self, binary, old=False, **kwargs):
+    def __init__(self, command, **kwargs):
         """
         Parameters
         ----------
-        binary: str
-            Path to the ONETEP binary.
-        old: bool
-            If True, will use the old ASE_ONETEP_COMMAND
-            interface.
+        command: str
+            The onetep command (not including inputfile).
         **kwargs: dict
             Additional kwargs are passed to the BaseProfile
             class.
         """
-        super().__init__(**kwargs)
-        self.binary = binary
-        self.old = old
+        super().__init__(command, **kwargs)
 
     def version(self):
-        lines = read_stdout(self.binary)
+        lines = read_stdout(self._split_command)
         return self.parse_version(lines)
 
     def parse_version(lines):
         return '1.0.0'
 
     def get_calculator_command(self, inputfile):
-        if self.old:
-            return self.binary.split() + [str(inputfile)]
-        else:
-            return [self.binary, str(inputfile)]
+        return [str(inputfile)]
 
 
 class OnetepTemplate(CalculatorTemplate):
@@ -149,8 +139,6 @@ class Onetep(GenericFileIOCalculator):
             *,
             profile=None,
             directory='.',
-            parallel_info=None,
-            parallel=True,
             **kwargs):
 
         self.keywords = kwargs.get('keywords', None)
@@ -160,13 +148,12 @@ class Onetep(GenericFileIOCalculator):
 
         if 'ASE_ONETEP_COMMAND' in environ and profile is None:
             import warnings
+            import shlex
             warnings.warn("using ASE_ONETEP_COMMAND env is \
                           deprecated, please use OnetepProfile",
                           FutureWarning)
-            profile = OnetepProfile(environ['ASE_ONETEP_COMMAND'], old=True)
+            profile = OnetepProfile(shlex.split(environ['ASE_ONETEP_COMMAND']))
 
         super().__init__(profile=profile, template=self.template,
                          directory=directory,
-                         parameters=kwargs,
-                         parallel=parallel,
-                         parallel_info=parallel_info)
+                         parameters=kwargs)
