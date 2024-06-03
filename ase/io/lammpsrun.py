@@ -217,7 +217,7 @@ def lammps_data_to_ase_atoms(
     return out_atoms
 
 
-def lammps_data_to_ase_atoms_typed(
+def lammps_data_to_ase_atoms_from_typed_data(
     data,
     colnames,
     cell,
@@ -376,62 +376,57 @@ def get_max_index(index):
 
 
 def _process_timestep(args):
-    data_bytes, kwargs = args
-    bytes_stream = io.BytesIO(data_bytes) if isinstance(data_bytes,
-                                                        bytes) else data_bytes
+    data_string, kwargs = args
+    string_stream = io.StringIO(data_string)
 
-    timestep_header = bytes_stream.readline().strip()
-    if not timestep_header.startswith(b'ITEM: TIMESTEP'):
+    timestep_header = string_stream.readline().strip()
+    if not timestep_header.startswith('ITEM: TIMESTEP'):
         raise ValueError("Expected 'ITEM: TIMESTEP' line is missing or invalid")
 
     # The actual timestep
-    bytes_stream.readline()
+    string_stream.readline()
 
     # Read the number of atoms
-    natoms_header = bytes_stream.readline().strip()
-    if not natoms_header.startswith(b'ITEM: NUMBER OF ATOMS'):
+    natoms_header = string_stream.readline().strip()
+    if not natoms_header.startswith('ITEM: NUMBER OF ATOMS'):
         raise ValueError(
             "Expected 'ITEM: NUMBER OF ATOMS' line is missing or invalid")
-    bytes_stream.readline()
+    string_stream.readline()
 
     # Read the box bounds
-    bounds_header = bytes_stream.readline().strip()
-    if not bounds_header.startswith(b'ITEM: BOX BOUNDS'):
+    bounds_header = string_stream.readline().strip()
+    if not bounds_header.startswith('ITEM: BOX BOUNDS'):
         raise ValueError(
             "Expected 'ITEM: BOX BOUNDS' line is missing or invalid")
     if len(bounds_header.split()) > 3:
-        pbc = bounds_header.split(b' ')[3:]
-        pbc = [bc.decode() for bc in pbc]
+        pbc = bounds_header.split(' ')[3:]
         pbc = [bc == 'pp' for bc in pbc]
     else:
         # Just assume pbc
         pbc = [True, True, True]
 
     bounds_data = [list(
-        map(float, bytes_stream.readline().strip().split())) for _ in range(3)]
+        map(float, string_stream.readline().strip().split())) for _ in range(3)]
 
     # Read the atom data header
-    atoms_header = bytes_stream.readline().strip()
-    if not atoms_header.startswith(b'ITEM: ATOMS'):
+    atoms_header = string_stream.readline().strip()
+    if not atoms_header.startswith('ITEM: ATOMS'):
         raise ValueError("Expected 'ITEM: ATOMS' line is missing or invalid")
     colnames = atoms_header.split()[2:]
 
     # Determine the data types for each column
     dtype_list = []
-    decoded_colnames = []
     for colname in colnames:
-        decoded_colname = colname.decode()
-        decoded_colnames.append(decoded_colname)
-        if decoded_colname == 'id' or decoded_colname == 'type':
-            dtype_list.append((decoded_colname, int))
-        elif decoded_colname == 'element':
-            # 'U10' for string with maximum length 10
-            dtype_list.append((decoded_colname, 'U10'))
+        if colname in ['id', 'type']:
+            dtype_list.append((colname, int))
+        elif colname == 'element':
+            # 'U10' for strings with a max length of 10 characters
+            dtype_list.append((colname, 'U10'))
         else:
-            dtype_list.append((decoded_colname, float))
+            dtype_list.append((colname, float))
 
     # Read the data directly into the numpy array using numpy.loadtxt
-    data = np.loadtxt(bytes_stream, dtype=dtype_list)
+    data = np.loadtxt(string_stream, dtype=dtype_list)
 
     # Construct the cell and celldisp
     celldata = np.array(bounds_data)
@@ -440,69 +435,106 @@ def _process_timestep(args):
     cell, celldisp = construct_cell(diagdisp, offdiag)
 
     # Convert data to Atoms object
-    atoms = lammps_data_to_ase_atoms_typed(
-        data, decoded_colnames, cell, celldisp, pbc, atomsobj=Atoms, **kwargs)
+    atoms = lammps_data_to_ase_atoms_from_typed_data(
+        data, colnames, cell, celldisp, pbc, atomsobj=Atoms, **kwargs)
 
     return atoms
 
 
-def read_lammps_dump_text(fileobj, index=-1, **kwargs):
-    """Process cleartext lammps dumpfiles
-
-    :param fileobj: filestream providing the trajectory data
-    :param index: integer or slice object (default: get the last timestep)
-    :returns: list of Atoms objects
-    :rtype: list
-    """
-    # If string.IO or file-like object
-    if isinstance(fileobj, str):
-        with open(fileobj, "rb") as f:
-            return read_lammps_dump_text(f, index, **kwargs)
-
-    # Convert the input stream to bytes if necessary
-    if isinstance(fileobj, io.TextIOWrapper):
-        data = fileobj.buffer.read()
-    elif isinstance(fileobj, io.StringIO):
-        data = fileobj.read().encode()
-    else:
-        data = fileobj.read()
-
-    # Find the positions of all timesteps in the data
-    pattern = re.compile(rb'ITEM: TIMESTEP\n')
-    timestep_positions = [m.start() for m in pattern.finditer(data)]
-    num_timesteps = len(timestep_positions)
-
-    indices = _get_indices(index, num_timesteps)
-
-    # Read the data for each timestep and send it to the process pool
-    timestep_data = []
-    for i in indices:
-        current_start = timestep_positions[i]
-        if i < num_timesteps - 1:
-            current_end = timestep_positions[i + 1]
-        else:
-            current_end = len(data)
-        timestep_data.append((data[current_start:current_end], kwargs))
-
-    results = []
-    for td in timestep_data:
-        results.append(_process_timestep(td))
-
-    if len(results) == 1:
-        return results[0]
-    return results
-
-
 def _get_indices(index, num_timesteps):
+    """
+    Get the indices for the timesteps to be processed.
+
+    :param index: integer, slice object, or None
+    :param num_timesteps: number of timesteps in the trajectory
+
+    :returns: list of indices
+
+    How it works:
+    - If `index` is an integer, return a list containing that integer.
+    - If `index` is a slice object, return a list of indices generated by the
+      slice object.
+    - If `index` is None, return a list of all timesteps.
+    """
     if isinstance(index, slice):
         start, stop, step = index.indices(num_timesteps)
         return np.arange(start, stop, step)
-    elif index < 0:
-        return [num_timesteps - 1]
     elif index is None:
         return np.arange(num_timesteps)
+    elif index < 0:
+        return [num_timesteps - 1]
     else:
         return [index]
+
+
+def read_lammps_dump_text(fileobj, index=-1, **kwargs):
+    """Process cleartext LAMMPS dump files
+    :param fileobj: filestream providing the trajectory data
+    :param index: integer or slice object (default: get the last timestep)
+    :yields: Atoms objects
+    :rtype: generator
+
+    read_lammps_dump_text is called by _iread in formats.py. It's wrapped by a
+    @parrallel_generator decorator which allows for parallel reading of multiple
+    files. The generator yields Atoms objects for each requested timestep.
+
+    Files are opened before being read so we get either a io.StringIO or a
+    io.TextIOWrapper object to work with.
+    """
+
+    # Define the (arbitrary) chunk size for reading the file.
+    chunksize = 1024 * 1024 * 100  # 10 MB
+
+    def find_timestep_positions():
+        """
+        Generator to find and yield positions of 'ITEM: TIMESTEP' in the file.
+
+        How it works:
+
+        1. Read the file in chunks of size `chunksize`.
+        2. Search for the pattern 'ITEM: TIMESTEP' in the chunk.
+        3. If the pattern is found, yield the position of the pattern.
+        4. Keep only the trailing part of the chunk that hasn't been searched.
+        5. Repeat steps 2-4 for the next chunk.
+
+        """
+        pattern = re.compile(r'ITEM: TIMESTEP\n')
+        pos = 0
+        while True:
+            chunk = fileobj.read(chunksize)
+            if not chunk:
+                break
+            for match in pattern.finditer(chunk):
+                yield pos + match.start()
+            pos += len(chunk)
+            # Keep only the trailing part that hasn't been searched
+            if match:
+                chunk = chunk[match.end():]
+
+    # Get all timestep positions
+    positions = list(find_timestep_positions())
+    num_timesteps = len(positions)
+
+    # Append end of file position for the last chunk
+    # seek(a,b) where a is the offset and b is the reference position
+    # (0: start of file, 1: current position, 2: end of file)
+    positions.append(fileobj.seek(0, 2))
+
+    # Get indices for the requested timesteps
+    indices = _get_indices(index, num_timesteps)
+
+    def read_timestep_chunks():
+        """
+        Generator to read and yield chunks of file corresponding to timesteps.
+        """
+        for start, end in zip(positions, positions[1:]):
+            fileobj.seek(start)
+            yield fileobj.read(end - start)
+
+    # Yield Atoms objects for each requested timestep
+    for i, chunk in enumerate(read_timestep_chunks()):
+        if i in indices:
+            yield _process_timestep((chunk, kwargs))
 
 
 def read_lammps_dump_binary(
