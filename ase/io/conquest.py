@@ -227,7 +227,7 @@ def write_conquest(fileobj, atoms, atomic_order, fractional=True):
     
     # CONQUEST by default works in units of Bohr:
     cellpar[0:3] = cellpar[0:3] / Bohr
-    latfmt = '{0:<12.6f}{1:<12.6f}{2:<12.6f}\n'
+    latfmt = '{0:<16.6f}{1:<16.6f}{2:<16.6f}\n'
     fileobj.write(latfmt.format(cellpar[0], 0., 0.))
     fileobj.write(latfmt.format(0., cellpar[1], 0.))
     fileobj.write(latfmt.format(0., 0., cellpar[2]))
@@ -243,7 +243,7 @@ def write_conquest(fileobj, atoms, atomic_order, fractional=True):
     symbols = atoms.get_chemical_symbols()
     natoms = len(symbols)
     fileobj.write(f'{natoms}\n')
-    coordfmt = '{0:>14.8f}{1:>14.8f}{2:>14.8f}{3:>4d}{4:>2s}{5:>2s}{6:>2s}\n'
+    coordfmt = '{0:>16.12f}{1:>16.12f}{2:>16.12f}{3:>4d}{4:>2s}{5:>2s}{6:>2s}\n'
     if fractional:
         p = atoms.get_scaled_positions()
     else:
