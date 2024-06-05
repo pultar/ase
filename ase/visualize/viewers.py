@@ -24,14 +24,14 @@ from pathlib import Path
 from ase.register.listing import LazyListing
 from ase.utils import lazyproperty
 import ase.io
-from ase.register.plugables import BasePlugable, Plugables
+from ase.register.pluggables import BasePluggable, Pluggables
 
 
 class UnknownViewerError(Exception):
     """The view tyep is unknown"""
 
 
-class AbstractPlugableViewer(BasePlugable):
+class AbstractPluggableViewer(BasePluggable):
 
     class_type = 'viewers'
 
@@ -58,7 +58,7 @@ class AbstractPlugableViewer(BasePlugable):
             self.plugin = ase.plugins.plugins[self.plugin]
 
 
-class PyViewer(AbstractPlugableViewer):
+class PyViewer(AbstractPluggableViewer):
     def __init__(self, name: str, desc: str, module_name: str):
         """
         Instantiate an viewer
@@ -84,7 +84,7 @@ class PyViewer(AbstractPlugableViewer):
         return self._viewfunc()(atoms, *args, **kwargs)
 
 
-class CLIViewer(AbstractPlugableViewer):
+class CLIViewer(AbstractPluggableViewer):
     """Generic viewer for"""
 
     def __init__(self, name, fmt, argv):
@@ -143,9 +143,9 @@ class CLIViewer(AbstractPlugableViewer):
         return proc
 
 
-class ViewerPlugables(Plugables):
+class ViewerPluggables(Pluggables):
 
-    item_type = AbstractPlugableViewer
+    item_type = AbstractPluggableViewer
 
     def info(self, prefix='', opts={}, filter=None):
         return f"{prefix}IO Formats:\n" \
@@ -209,7 +209,7 @@ if __name__ == "__main__":
 # Will be inited by ase.plugins.__init__ to avoid a circular imports
 # Deprecatd, will preffered way is to access the viewers by
 # ase.plugins.viewers
-VIEWERS: ViewerPlugables = None     # type: ignore[assignment]
+VIEWERS: ViewerPluggables = None     # type: ignore[assignment]
 CLI_VIEWERS: LazyListing = None     # type: ignore[assignment]
 PY_VIEWERS: LazyListing = None      # type: ignore[assignment]
 

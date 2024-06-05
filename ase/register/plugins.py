@@ -1,5 +1,5 @@
 """ This module contains the classes for listing plugins and
-the plugables (Calculators, IOs, etc...) provided by the plugins.
+the pluggables (Calculators, IOs, etc...) provided by the plugins.
 
 
 The structure is as follows
@@ -13,8 +13,8 @@ The structure is as follows
 ^^^^^^^^^^                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
     |                                           |
    1:n  for each type                         1:n - plugin can return lists
-    |   (i.e viewer, calculator)                | of plugables
-    |                                           | of each plugable type
+    |   (i.e viewer, calculator)                | of pluggables
+    |                                           | of each pluggable type
     |                                           | (calculator, viewer)
     |                                           | that it provides
     |                                           |
@@ -22,7 +22,7 @@ The structure is as follows
     |                                           |
 -------------------------                ------------------------
 |                       |                |                      |
-|    Plugables:         |                |    Plugable:         |
+|    Pluggables:         |                |    Pluggable:         |
 |      list all the     |------1:n-------|    holds inform.     |
 |   available 'items'   |                |    about just one    |
 |   (calcs, viewers)    |                |    calculator        |
@@ -71,7 +71,7 @@ def within_the_plugin(plugin):
 def get_currently_registered_plugin():
     """
     Which plugin is imported and so to which plugin
-    belongs currently imported Plugables
+    belongs currently imported Pluggables
 
     See the :func:within_the_plugin
     """
@@ -86,12 +86,12 @@ class Plugins(Listing):
     """ A class, that holds all the installed plugins in
         the given namespace package."""
 
-    """ This information is just for initial creating of the plugables """
-    def __init__(self, namespace_package, plugable_types):
+    """ This information is just for initial creating of the pluggables """
+    def __init__(self, namespace_package, pluggable_types):
         self.namespace_package = namespace_package
-        self._plugables = {
+        self._pluggables = {
             k: cls(self, k)
-            for k, cls in plugable_types.items()
+            for k, cls in pluggable_types.items()
         }
 
     def packages(self):
@@ -121,23 +121,23 @@ class Plugins(Listing):
         self._items = {p.__name__.rsplit('.', 1)[-1]: Plugin(self, p)
                        for p in self.packages()}
 
-    def plugables_of(self, class_type):
-        return self._plugables[class_type]
+    def pluggables_of(self, class_type):
+        return self._pluggables[class_type]
 
-    def all_plugables(self):
-        return self._plugables.values()
+    def all_pluggables(self):
+        return self._pluggables.values()
 
     @lazyproperty
     def calculators(self):
-        return self.plugables_of('calculators')
+        return self.pluggables_of('calculators')
 
     @lazyproperty
     def viewers(self):
-        return self.plugables_of('viewers')
+        return self.pluggables_of('viewers')
 
     @lazyproperty
     def io_formats(self):
-        return self.plugables_of('io_formats')
+        return self.pluggables_of('io_formats')
 
     def __repr__(self):
         return f"<ASE plugins from: {self.namespace_package}>"
@@ -148,9 +148,9 @@ class Plugins(Listing):
 
     def register(self):
         """
-        Register all the installed plugables. To do so
+        Register all the installed pluggables. To do so
         - import all plugin packages
-        - register all the plugables from the plugins
+        - register all the pluggables from the plugins
         """
         self.populate()
         for i in self:
@@ -163,16 +163,16 @@ class Plugin:
     def __init__(self, plugins, package):
         self.plugins = plugins
         self.package = package
-        self.plugables = {
-            i.class_type: {} for i in plugins.all_plugables()
+        self.pluggables = {
+            i.class_type: {} for i in plugins.all_pluggables()
         }
         self.modules = {}
-        self._plugables = {}
+        self._pluggables = {}
         self.registered = False
 
-    def add_plugable(self, plugable):
-        """ Called by Plugable.register() """
-        self.plugables[plugable.class_type][plugable.name] = plugable
+    def add_pluggable(self, pluggable):
+        """ Called by Pluggable.register() """
+        self.pluggables[pluggable.class_type][pluggable.name] = pluggable
 
     @property
     def name(self):
@@ -183,7 +183,7 @@ class Plugin:
         return ( self.name.lower(), )
 
     def register(self):
-        """ Register the plugables in the plugin:
+        """ Register the pluggables in the plugin:
         Call the ase_register function from the
         __init__.py of the plugin package
         """
@@ -200,11 +200,11 @@ class Plugin:
         opts = opts.copy()
         opts['plugin'] = False
 
-        for plugables in self.plugins.all_plugables():
-            itype = plugables.class_type
-            inst = self.plugables[itype]
+        for pluggables in self.plugins.all_pluggables():
+            itype = pluggables.class_type
+            inst = self.pluggables[itype]
             if inst:
-                p = f'\n{prefix}{plugables.singular_name}: '
+                p = f'\n{prefix}{pluggables.singular_name}: '
                 for i in inst.values():
                     info += i.info(p, opts)
         return info

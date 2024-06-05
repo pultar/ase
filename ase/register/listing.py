@@ -59,7 +59,7 @@ class ListingView(Mapping):
 
 
 class BaseListing(Mapping):
-    """ Class, that lists something, e.g. Plugins or Plugables
+    """ Class, that lists something, e.g. Plugins or Pluggables
     (of calculators or formats etc...).
     The added items are required to have a name attribute.
 

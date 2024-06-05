@@ -1,4 +1,4 @@
-""" Plugables are the "week" (in terms that they not need to import
+""" Pluggables are the "week" (in terms that they not need to import
 the real implementator, if they are not actually used) references
 to the classes/modules/function...whatever implements a given
 functionality, e.g. Calculators, IOFormats etc."""
@@ -8,18 +8,18 @@ import importlib
 from . listing import Listing
 
 
-class BasePlugable:
+class BasePluggable:
     """
     A class, that holds information about an implementation of a calculator,
     viewer, IO, whatsoever.
     """
     def register(self):
-        self.plugin.add_plugable(self)
-        self.plugin.plugins.plugables_of(self.class_type).add(self)
+        self.plugin.add_pluggable(self)
+        self.plugin.plugins.pluggables_of(self.class_type).add(self)
 
     @lazyproperty
     def lowercase_names(self):
-        """ Some plugables can be found not only by the name of the plugable,
+        """ Some pluggables can be found not only by the name of the pluggable,
         but e.g. by the name of the implementing class """
         return (self.name.lower(),)
 
@@ -30,8 +30,8 @@ class BasePlugable:
         return out
 
 
-class Plugable(BasePlugable):
-    """ A plugable, that is implemented by a class """
+class Pluggable(BasePluggable):
+    """ A pluggable, that is implemented by a class """
 
     def __init__(self, plugin, class_type, name, cls):
         self.plugin = plugin
@@ -79,11 +79,11 @@ class Plugable(BasePlugable):
         return {i.lower() for i in self.names}
 
 
-class Plugables(Listing):
-    """ This class holds all the Plugables (Calculators, Viewers, ...)
+class Pluggables(Listing):
+    """ This class holds all the Pluggables (Calculators, Viewers, ...)
     of one type, that can be used by user """
 
-    item_type: type = Plugable
+    item_type: type = Pluggable
 
     def __init__(self, plugin_list, class_type: str):
         super().__init__()
@@ -104,9 +104,9 @@ class Plugables(Listing):
 
     @lazyproperty
     def singular_name(self):
-        """ Return the human readable name of plugable it contains,
+        """ Return the human readable name of pluggable it contains,
         for the purpose of the output. E.g.
-        > CalculatorPlugables(None, 'io_formats').singular_name
+        > CalculatorPluggables(None, 'io_formats').singular_name
         'io format'
         """
         return self.class_type[:-1].replace('_', ' ')
@@ -115,7 +115,7 @@ class Plugables(Listing):
         return f"<ASE list of {self.class_type}>"
 
 
-class CalculatorPlugable(Plugable):
+class CalculatorPluggable(Pluggable):
 
     @lazyproperty
     def implementation(self):
@@ -127,13 +127,13 @@ class CalculatorPlugable(Plugable):
         return super().__getitem__(name).implementation
 
 
-class CalculatorPlugables(Plugables):
-    """ Just a few specialities for plugables calculators """
+class CalculatorPluggables(Pluggables):
+    """ Just a few specialities for pluggables calculators """
 
-    item_type = CalculatorPlugable
+    item_type = CalculatorPluggable
 
     def find_by_name(self, name):
-        """ Plugables can be found by their lowercased name (and ), too """
+        """ Pluggables can be found by their lowercased name (and ), too """
         out = self.find_by('names', name.lower())
         if not out:
             out = self.find_by('lowercase_names', name.lower())

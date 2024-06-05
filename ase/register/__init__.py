@@ -5,27 +5,27 @@ define_io_format = None
 define_viewer = None
 
 
-def _register(plugable_type: str, cls: str, name=None):
-    """ Register a calculator or other plugable exposed by a plugin.
+def _register(pluggable_type: str, cls: str, name=None):
+    """ Register a calculator or other pluggable exposed by a plugin.
     The name can be derived from the cls name
 
     Parameters
     ----------
-    plugable_type
+    pluggable_type
       Which to register. E.g. 'calculators', 'io_formats' and so on.
       However, io_formats have its old routine to register, so they
       do not use this mechanism.
 
     cls: str
-      Which class implements the plugable (e.g. 'ase.plugins.emt.EMTCalculator')
+      Which class implements the pluggable (e.g. 'ase.plugins.emt.EMTCalculator')
       The class goes by its name only to avoid importing too myuch stuff.
     """
     if not name:
         name = cls.rsplit(".", 1)[-1]
     plugin = get_currently_registered_plugin()
-    p_cls = plugin.plugins.plugables_of(plugable_type).item_type
-    plugable = p_cls(plugin, plugable_type, name, cls)
-    plugable.register()
+    p_cls = plugin.plugins.pluggables_of(pluggable_type).item_type
+    pluggable = p_cls(plugin, pluggable_type, name, cls)
+    pluggable.register()
 
 
 def register_calculator(cls: str, name=None):

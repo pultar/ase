@@ -44,7 +44,7 @@ class CLICommand:
             if val is None:
                 continue
             print()
-            print_plugables(i, val or None)
+            print_pluggables(i, val or None)
 
 
 def print_file_info(args):
@@ -93,14 +93,14 @@ def print_info():
         print(f'{name:24} {path}')
 
 
-def print_plugables(i, only_given=None):
+def print_pluggables(i, only_given=None):
     import ase.plugins as plugins
     to_print = getattr(plugins, i)
     if only_given:
         only_given = [ i.lower() for i in only_given ]
 
-        def filter(plugable):
-            for i in plugable.lowercase_names:
+        def filter(pluggable):
+            for i in pluggable.lowercase_names:
                 for j in only_given:
                     if j in i:
                         return True
