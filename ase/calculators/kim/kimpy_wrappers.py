@@ -8,7 +8,6 @@ University of Minnesota
 import functools
 from abc import ABC
 
-import kimpy
 import numpy as np
 
 from .exceptions import (KIMModelInitializationError, KIMModelNotFound,
@@ -107,21 +106,6 @@ def check_call_wrapper(func):
     return myfunc
 
 
-# kimpy methods
-collections_create = functools.partial(check_call, kimpy.collections.create)
-model_create = functools.partial(check_call, kimpy.model.create)
-simulator_model_create = functools.partial(
-    check_call, kimpy.simulator_model.create)
-get_species_name = functools.partial(
-    check_call, kimpy.species_name.get_species_name)
-get_number_of_species_names = functools.partial(
-    check_call, kimpy.species_name.get_number_of_species_names
-)
-
-# kimpy attributes (here to avoid importing kimpy in higher-level modules)
-collection_item_type_portableModel = kimpy.collection_item_type.portableModel
-
-
 class ModelCollections:
     """
     KIM Portable Models and Simulator Models are installed/managed into
@@ -133,7 +117,7 @@ class ModelCollections:
     """
 
     def __init__(self):
-        self.collection = collections_create()
+        self.collection = wrappers.collections_create()
 
     def __enter__(self):
         return self
