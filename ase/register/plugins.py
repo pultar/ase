@@ -22,7 +22,7 @@ The structure is as follows
     |                                           |
 -------------------------                ------------------------
 |                       |                |                      |
-|    Pluggables:         |                |    Pluggable:         |
+|    Pluggables:        |                |    Pluggable:        |
 |      list all the     |------1:n-------|    holds inform.     |
 |   available 'items'   |                |    about just one    |
 |   (calcs, viewers)    |                |    calculator        |
