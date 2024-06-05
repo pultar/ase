@@ -1,6 +1,6 @@
 from collections.abc import Mapping
 from ase.utils import lazyproperty
-from typing import Dict, Optional
+from typing import Dict, Optional, Callable
 from collections import defaultdict
 
 
@@ -71,7 +71,7 @@ class BaseListing(Mapping):
         """ Add an item """
         self._items[item.name] = item
 
-    def info(self, prefix: str = '', opts: Dict = {}, filter: Optional[callable] = None) -> str:
+    def info(self, prefix: str = '', opts: Dict = {}, filter: Optional[Callable[[object], bool]] = None) -> str:
         """
         Parameters
         ----------
