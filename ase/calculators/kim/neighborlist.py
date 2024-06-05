@@ -1,24 +1,13 @@
 from collections import defaultdict
 
+import kimpy
 import numpy as np
+from kimpy import neighlist
 
 from ase import Atom
 from ase.neighborlist import neighbor_list
 
 from .kimpy_wrappers import c_double, c_int, check_call_wrapper
-
-try:
-    import kimpy
-    from kimpy import neighlist
-
-    def check_kimpy():
-        pass
-
-except ImportError:
-
-    def check_kimpy():
-        raise NotImplementedError("To use KIM calculator, please "
-                                  "install kimpy package")
 
 
 class NeighborList:
@@ -57,7 +46,7 @@ class NeighborList:
         padding_not_require_neigh,
         debug,
     ):
-        check_kimpy()
+
         self.set_neigh_parameters(
             neigh_skin_ratio,
             model_influence_dist,
