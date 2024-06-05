@@ -17,7 +17,8 @@ def _register(pluggable_type: str, cls: str, name=None):
       do not use this mechanism.
 
     cls: str
-      Which class implements the pluggable (e.g. 'ase.plugins.emt.EMTCalculator')
+      Which class implements the pluggable (e.g.
+      ``ase.plugins.emt.EMTCalculator``)
       The class goes by its name only to avoid importing too myuch stuff.
     """
     if not name:

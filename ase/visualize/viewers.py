@@ -149,7 +149,8 @@ class ViewerPluggables(Pluggables):
 
     def info(self, prefix='', opts={}, filter=None):
         return f"{prefix}IO Formats:\n" \
-               f"{prefix}-----------\n" + super().info(prefix + '  ', opts, filter)
+               f"{prefix}-----------\n" + \
+               super().info(prefix + '  ', opts, filter)
 
     @lazyproperty
     def cli_viewers(self):

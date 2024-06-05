@@ -180,7 +180,7 @@ class Plugin:
 
     @property
     def lowercase_names(self):
-        return ( self.name.lower(), )
+        return (self.name.lower(), )
 
     def register(self):
         """ Register the pluggables in the plugin:

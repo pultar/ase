@@ -141,4 +141,5 @@ class CalculatorPluggables(Pluggables):
 
     def info(self, prefix='', opts={}, filter=None):
         return f"{prefix}Calculators:\n" \
-               f"{prefix}------------\n" + super().info(prefix + '  ', opts, filter)
+               f"{prefix}------------\n" + \
+               super().info(prefix + '  ', opts, filter)

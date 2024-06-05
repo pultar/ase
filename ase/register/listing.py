@@ -71,7 +71,8 @@ class BaseListing(Mapping):
         """ Add an item """
         self._items[item.name] = item
 
-    def info(self, prefix: str = '', opts: Dict = {}, filter: Optional[Callable[[object], bool]] = None) -> str:
+    def info(self, prefix: str = '', opts: Dict = {},
+             filter: Optional[Callable[[object], bool]] = None) -> str:
         """
         Parameters
         ----------
@@ -92,7 +93,7 @@ class BaseListing(Mapping):
             frm = (i for i in frm if filter(i))
         out = [i.info(prefix) for i in frm]
         if filter and not out:
-            out = [ prefix + ' ...sorry, no such item found' ]
+            out = [prefix + ' ...sorry, no such item found']
         return '  \n'.join(out)
 
     def filter(self, filter):

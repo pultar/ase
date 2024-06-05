@@ -18,21 +18,26 @@ class CLICommand:
                             help='Show more information about files.')
         parser.add_argument('--config', action='store_true',
                             help='List configured calculators')
-        parser.add_argument('--formats', nargs='*', metavar='NAME', dest='io_formats',
-                            help='List file formats: all known to ASE, or the ones which names contain given string(s)')
+        parser.add_argument('--formats', nargs='*', metavar='NAME',
+                            dest='io_formats',
+                            help='List file formats: all known to ASE, or the '
+                                 'ones with the given string(s) in the name')
         parser.add_argument('--calculators', nargs='*', metavar='NAME',
                             help='List calculators and their configuration:'
-                                 ' all known to ASE, or the ones which names contain given string(s)')
+                                 ' all known to ASE, or the ones with the given'
+                                 ' string(s) in the name')
         parser.add_argument('--viewers', nargs='*', metavar='NAME',
-                            help='List viewers: all the known to ASE, or the ones which names contain given string(s) ')
+                            help='List viewers: all the known to ASE, or the '
+                                 'ones with the given string(s) in the name')
         parser.add_argument('--plugins', nargs='*', metavar='NAME',
-                            help='List plugins: all installed, or the ones which names contain given string(s)')
+                            help='List plugins: all installed, or the ones '
+                                 'with the given string(s) in the name')
 
     @staticmethod
     def run(args):
         print_info()
         if args.files:
-             print_file_info(args)
+            print_file_info(args)
 
         if args.config:
             print()
@@ -97,7 +102,7 @@ def print_pluggables(i, only_given=None):
     import ase.plugins as plugins
     to_print = getattr(plugins, i)
     if only_given:
-        only_given = [ i.lower() for i in only_given ]
+        only_given = [i.lower() for i in only_given]
 
         def filter(pluggable):
             for i in pluggable.lowercase_names:
@@ -108,4 +113,4 @@ def print_pluggables(i, only_given=None):
     else:
         filter = None
 
-    print(to_print.info(filter = filter))
+    print(to_print.info(filter=filter))
