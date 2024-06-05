@@ -1,6 +1,6 @@
 from collections.abc import Mapping
 from ase.utils import lazyproperty
-from typing import Dict
+from typing import Dict, Optional
 from collections import defaultdict
 
 
@@ -71,7 +71,7 @@ class BaseListing(Mapping):
         """ Add an item """
         self._items[item.name] = item
 
-    def info(self, prefix: str = '', opts: Dict = {}) -> str:
+    def info(self, prefix: str = '', opts: Dict = {}, filter: Optional[callable] = None) -> str:
         """
         Parameters
         ----------
@@ -87,8 +87,12 @@ class BaseListing(Mapping):
         info
           Information about the object and (if applicable) contained items.
         """
-
-        out = [i.info(prefix) for i in self.sorted]
+        frm = self.sorted
+        if filter:
+            frm = (i for i in frm if filter(i))
+        out = [i.info(prefix) for i in frm]
+        if filter and not out:
+            out = [ prefix + ' ...sorry, no such item found' ]
         return '  \n'.join(out)
 
     def filter(self, filter):

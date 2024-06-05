@@ -17,9 +17,9 @@ import subprocess
 import sys
 import tempfile
 from contextlib import contextmanager
+from importlib import import_module
 from io import BytesIO
 from pathlib import Path
-from importlib import import_module
 
 from ase.register.listing import LazyListing
 from ase.utils import lazyproperty
@@ -39,7 +39,7 @@ class AbstractPlugableViewer(BasePlugable):
         self.name = name
 
     def view(self, *args, **kwargss):
-        raise NotImplementedError()
+        raise NotImplementedError
 
     def implementation(self):
         return self.view
@@ -147,9 +147,9 @@ class ViewerPlugables(Plugables):
 
     item_type = AbstractPlugableViewer
 
-    def info(self, prefix='', opts={}):
+    def info(self, prefix='', opts={}, filter=None):
         return f"{prefix}IO Formats:\n" \
-               f"{prefix}-----------\n" + super().info(prefix + '  ', opts)
+               f"{prefix}-----------\n" + super().info(prefix + '  ', opts, filter)
 
     @lazyproperty
     def cli_viewers(self):

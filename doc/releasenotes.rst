@@ -9,6 +9,14 @@ Git master branch
 
 :git:`master <>`.
 
+* No changes yet
+
+
+Version 3.23.0
+==============
+
+31 May 2024: :git:`3.23.0 <../3.23.0>`
+
 * Add :class:`~ase.constraints.FixSubsetCom` to fix the center of mass of the
   specified subset of atoms (:mr:`3193`).
 
@@ -264,6 +272,9 @@ Thermochemistry:
   cutting them down to the physically appropriate amount.
 
 I/O:
+
+* Add support for reading Mulliken, Löwdin, or Hirshfeld atomic charges in
+  :func:`ase.io.gaussian.read_gaussian_out` (:mr:`3332`)
 
 * Add support for reading POSCAR files with negative and multiple scaling
   factors in :func:`ase.io.vasp.read_vasp` (:mr:`3029`)

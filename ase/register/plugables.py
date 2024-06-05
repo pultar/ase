@@ -31,7 +31,7 @@ class BasePlugable:
 
 
 class Plugable(BasePlugable):
-    """ An plugable, that is implemented by a class """
+    """ A plugable, that is implemented by a class """
 
     def __init__(self, plugin, class_type, name, cls):
         self.plugin = plugin
@@ -69,8 +69,9 @@ class Plugable(BasePlugable):
         else:
             name = [self.name]
 
-        if self.cls.__name__ not in name:
-            name.append(self.cls.__name__)
+        _, cls = self.cls.rsplit('.', 1)
+        if cls not in name:
+            name.append(cls)
         return name
 
     @lazyproperty
@@ -118,7 +119,7 @@ class CalculatorPlugable(Plugable):
 
     @lazyproperty
     def implementation(self):
-        module, cls = self.cls.rsplit(',', 1)
+        module, cls = self.cls.rsplit('.', 1)
         module = importlib.import_module(module)
         return module.cls
 
@@ -138,6 +139,6 @@ class CalculatorPlugables(Plugables):
             out = self.find_by('lowercase_names', name.lower())
         return out
 
-    def info(self, prefix='', opts={}):
+    def info(self, prefix='', opts={}, filter=None):
         return f"{prefix}Calculators:\n" \
-               f"{prefix}------------\n" + super().info(prefix + '  ', opts)
+               f"{prefix}------------\n" + super().info(prefix + '  ', opts, filter)

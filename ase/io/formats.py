@@ -21,11 +21,12 @@ import os
 import re
 import sys
 import warnings
+from importlib import import_module
 from pathlib import Path, PurePath
-from typing import (IO, Any, Iterable, List, Optional, Sequence, Tuple, Union)
+from typing import (IO, Any, Iterable, List, Optional, Sequence, Tuple,
+                    Union)
 from ase.utils import lazyproperty
 from ase.register.plugables import BasePlugable, Plugables
-from importlib import import_module
 from ase.register.listing import ListingView
 
 from ase.atoms import Atoms
@@ -143,7 +144,7 @@ class IOFormat(BasePlugable):
         return self.can_write and 'append' in writefunc.__code__.co_varnames
 
     def __repr__(self) -> str:
-        tokens = [f'{name}={repr(value)}'
+        tokens = [f'{name}={value!r}'
                   for name, value in vars(self).items()]
         return 'IOFormat({})'.format(', '.join(tokens))
 
@@ -290,9 +291,9 @@ class IOFormatPlugables(Plugables):
 
     item_type = IOFormat
 
-    def info(self, prefix='', opts={}):
+    def info(self, prefix='', opts={}, filter=None):
         return f"{prefix}IO Formats:\n" \
-               f"{prefix}-----------\n" + super().info(prefix + '  ', opts)
+               f"{prefix}-----------\n" + super().info(prefix + '  ', opts, filter)
 
     @lazyproperty
     def by_extension(self):
@@ -578,7 +579,7 @@ def _write(filename, fd, format, io, images, parallel=None, append=False,
 def read(
         filename: NameOrFile,
         index: Any = None,
-        format: str = None,
+        format: Optional[str] = None,
         parallel: bool = True,
         do_not_split_by_at_sign: bool = False,
         **kwargs

@@ -142,9 +142,9 @@ class Plugins(Listing):
     def __repr__(self):
         return f"<ASE plugins from: {self.namespace_package}>"
 
-    def info(self, prefix='', opts={}):
+    def info(self, prefix='', opts={}, filter=None):
         return "Plugins:\n"\
-               "--------\n" + super().info(prefix, opts)
+               "--------\n" + super().info(prefix, opts, filter)
 
     def register(self):
         """
@@ -177,6 +177,10 @@ class Plugin:
     @property
     def name(self):
         return self.package.__name__[12:]   # get rig 'ase.plugins'
+
+    @property
+    def lowercase_names(self):
+        return ( self.name.lower(), )
 
     def register(self):
         """ Register the plugables in the plugin:
