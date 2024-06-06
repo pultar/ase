@@ -5,6 +5,7 @@
 
 # import ase.parallel early to avoid circular import problems when
 # ase.parallel does "from gpaw.mpi import world":
+
 import ase.parallel  # noqa
 from ase.atom import Atom
 from ase.atoms import Atoms
@@ -28,7 +29,7 @@ ase/
                       __init.py__
                       whatever_you_like.py
 
-The following command just tell to the python, that during import he should
+The following command just tell to the python, that during the import it should
 look not only into the ase distribution package, but to the others distribution
 packages as well.
 Unfortunatelly (it's not documented well in the link above), it's not sufficient
