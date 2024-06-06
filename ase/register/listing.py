@@ -38,7 +38,7 @@ class ListingView(Mapping):
         """ Return the followin mapping:
           <given attribute>:[list of objects having the attribute] """
         out = defaultdict(lambda: [])
-        for item in self.listing:
+        for item in self.listing.values():
             for attr in _item_attribute(item, self.attribute):
                 out[attr].append(self.mapping(item))
         out.default_factory = None
@@ -126,7 +126,7 @@ class BaseListing(Mapping):
         return out
 
     def __iter__(self):
-        return iter(self._items.values())
+        return iter(self._items)
 
     def values(self):
         return self._items.values()
@@ -148,7 +148,7 @@ class BaseListing(Mapping):
         The attribute can be given by list of alternative values,
         or not at all - in this case, the default value for the attribute
         will be used """
-        return (i for i in self if
+        return (i for i in self.values() if
                 _item_has_attribute(i, attribute, value))
 
     def find_by_name(self, name):

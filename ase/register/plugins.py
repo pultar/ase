@@ -153,7 +153,7 @@ class Plugins(Listing):
         - register all the pluggables from the plugins
         """
         self.populate()
-        for i in self:
+        for i in self.values():
             i.register()
 
 
