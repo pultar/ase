@@ -18,20 +18,16 @@ class Langevin(MolecularDynamics):
         self,
         atoms: Atoms,
         timestep: float,
-        temperature: Optional[float] = None,
-        friction: Optional[float] = None,
+        temperature: float,
+        friction: float,
         fixcm: bool = True,
-        *,
-        temperature_K: Optional[float] = None,
-        trajectory: Optional[str] = None,
-        logfile: Optional[Union[IO, str]] = None,
-        loginterval: int = 1,
         communicator=world,
-        rng=None,
-        append_trajectory: bool = False,
+        rng=np.random.default_rng(),
+        **md_kwargs
     ):
         """
-        Parameters:
+        Parameters
+        ----------
 
         atoms: Atoms object
             The list of atoms.
@@ -42,7 +38,7 @@ class Langevin(MolecularDynamics):
         temperature: float (deprecated)
             The desired temperature, in electron volt.
 
-        temperature_K: float
+        temperature: float
             The desired temperature, in Kelvin.
 
         friction: float
@@ -59,24 +55,9 @@ class Langevin(MolecularDynamics):
             standard_normal method matching the signature of
             numpy.random.standard_normal.
 
-        logfile: file object or str (optional)
-            If *logfile* is a string, a file with that name will be opened.
-            Use '-' for stdout.
-
-        trajectory: Trajectory object or str (optional)
-            Attach trajectory object.  If *trajectory* is a string a
-            Trajectory will be constructed.  Use *None* (the default) for no
-            trajectory.
-
         communicator: MPI communicator (optional)
             Communicator used to distribute random numbers to all tasks.
             Default: ase.parallel.world. Set to None to disable communication.
-
-        append_trajectory: bool (optional)
-            Defaults to False, which causes the trajectory file to be
-            overwritten each time the dynamics is restarted from scratch.
-            If True, the new structures are appended to the trajectory
-            file instead.
 
         The temperature and friction are normally scalars, but in principle one
         quantity per atom could be specified by giving an array.
@@ -89,34 +70,29 @@ class Langevin(MolecularDynamics):
         propagator in Eq. 21/34; but that propagator is not quasi-symplectic
         and gives a systematic offset in the temperature at large time steps.
         """
-        if friction is None:
-            raise TypeError("Missing 'friction' argument.")
+        self.temp = units.kB * temperature
         self.fr = friction
-        self.temp = units.kB * self._process_temperature(temperature,
-                                                         temperature_K, 'eV')
         self.fix_com = fixcm
+        self.rng = rng
+
         if communicator is None:
             communicator = DummyMPI()
+
         self.communicator = communicator
-        if rng is None:
-            self.rng = np.random
-        else:
-            self.rng = rng
-        MolecularDynamics.__init__(self, atoms, timestep, trajectory,
-                                   logfile, loginterval,
-                                   append_trajectory=append_trajectory)
+
+        MolecularDynamics.__init__(self, atoms, timestep, **md_kwargs)
+
         self.updatevars()
 
     def todict(self):
         d = MolecularDynamics.todict(self)
-        d.update({'temperature_K': self.temp / units.kB,
+        d.update({'temperature': self.temp / units.kB,
                   'friction': self.fr,
                   'fixcm': self.fix_com})
         return d
 
-    def set_temperature(self, temperature=None, temperature_K=None):
-        self.temp = units.kB * self._process_temperature(temperature,
-                                                         temperature_K, 'eV')
+    def set_temperature(self, temperature):
+        self.temp = units.kB * temperature
         self.updatevars()
 
     def set_friction(self, friction):

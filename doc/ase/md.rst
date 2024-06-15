@@ -32,7 +32,7 @@ dynamics, with slightly different results.
    Prior to ASE version 3.21.0, inconsistent units were used to
    specify temperature.  Some modules expected kT (in eV), others T
    (in Kelvin).  From ASE 3.21.0, all molecular dynamics modules
-   expecting a temperature take a parameter ``temperature_K`` which is
+   expecting a temperature take a parameter ``temperature`` which is
    the temperature in Kelvin.  For compatibility, they still accept
    the ``temperature`` parameter in the same unit as previous versions
    (eV or K), but using the old parameter will issue a warning.
@@ -210,7 +210,7 @@ For example, you can give a friction coefficient of 0.01 fs\ :sup:`−1`
   dyn = Langevin(
       atoms,
       timestep=5.0 * units.fs,
-      temperature_K=300.0,  # temperature in K
+      temperature=300.0,  # temperature in K
       friction=0.01 / units.fs,
   )
 
@@ -334,7 +334,7 @@ the gromacs manual at www.gromacs.org. or amber at ambermd.org
 ::
 
   # Room temperature simulation (300K, 0.1 fs time step, atmospheric pressure)
-  dyn = NPTBerendsen(atoms, timestep=0.1 * units.fs, temperature_K=300,
+  dyn = NPTBerendsen(atoms, timestep=0.1 * units.fs, temperature=300,
                      taut=100 * units.fs, pressure_au=1.01325 * units.bar,
                      taup=1000 * units.fs, compressibility_au=4.57e-5 / units.bar)
 
@@ -378,11 +378,11 @@ to the correct temperature.
 
 .. module:: ase.md.velocitydistribution
 
-.. autofunction:: MaxwellBoltzmannDistribution
+.. autofunction:: maxwell_boltzmann_distribution
 
-.. autofunction:: Stationary
+.. autofunction:: stationary
 
-.. autofunction:: ZeroRotation
+.. autofunction:: zero_rotation
 
 .. autofunction:: PhononHarmonics
 

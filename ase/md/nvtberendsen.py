@@ -3,9 +3,9 @@ from typing import IO, Optional, Union
 
 import numpy as np
 
-from ase import Atoms
+from ase import Atoms, units
 from ase.md.md import MolecularDynamics
-from ase.parallel import world
+from ase.parallel import DummyMPI, world
 
 
 class NVTBerendsen(MolecularDynamics):
@@ -13,20 +13,17 @@ class NVTBerendsen(MolecularDynamics):
         self,
         atoms: Atoms,
         timestep: float,
-        temperature: Optional[float] = None,
-        taut: Optional[float] = None,
+        temperature: float,
+        taut: float = 0.5e3 * units.fs,
         fixcm: bool = True,
-        *,
-        temperature_K: Optional[float] = None,
-        trajectory: Optional[str] = None,
-        logfile: Optional[Union[IO, str]] = None,
-        loginterval: int = 1,
         communicator=world,
-        append_trajectory: bool = False,
+        **md_kwargs,
     ):
-        """Berendsen (constant N, V, T) molecular dynamics.
+        """
+        Berendsen (constant N, V, T) molecular dynamics.
 
-        Parameters:
+        Parameters
+        ----------
 
         atoms: Atoms object
             The list of atoms.
@@ -37,49 +34,24 @@ class NVTBerendsen(MolecularDynamics):
         temperature: float
             The desired temperature, in Kelvin.
 
-        temperature_K: float
-            Alias for *temperature*
-
         taut: float
             Time constant for Berendsen temperature coupling in ASE
-            time units.
+            time units. Default: 0.5 ps.
 
         fixcm: bool (optional)
             If True, the position and momentum of the center of mass is
             kept unperturbed.  Default: True.
-
-        trajectory: Trajectory object or str (optional)
-            Attach trajectory object.  If *trajectory* is a string a
-            Trajectory will be constructed.  Use *None* for no
-            trajectory.
-
-        logfile: file object or str (optional)
-            If *logfile* is a string, a file with that name will be opened.
-            Use '-' for stdout.
-
-        loginterval: int (optional)
-            Only write a log line for every *loginterval* time steps.
-            Default: 1
-
-        append_trajectory: boolean (optional)
-            Defaults to False, which causes the trajectory file to be
-            overwriten each time the dynamics is restarted from scratch.
-            If True, the new structures are appended to the trajectory
-            file instead.
-
         """
-
-        MolecularDynamics.__init__(self, atoms, timestep, trajectory,
-                                   logfile, loginterval,
-                                   append_trajectory=append_trajectory)
-        if taut is None:
-            raise TypeError("Missing 'taut' argument.")
         self.taut = taut
-        self.temperature = self._process_temperature(temperature,
-                                                     temperature_K, 'K')
+        self.temp = temperature * units.kB
+        self.fix_com = fixcm
 
-        self.fix_com = fixcm  # will the center of mass be held fixed?
+        if communicator is None:
+            communicator = DummyMPI()
+
         self.communicator = communicator
+
+        MolecularDynamics.__init__(self, atoms, timestep, **md_kwargs)
 
     def set_taut(self, taut):
         self.taut = taut
@@ -87,12 +59,11 @@ class NVTBerendsen(MolecularDynamics):
     def get_taut(self):
         return self.taut
 
-    def set_temperature(self, temperature=None, *, temperature_K=None):
-        self.temperature = self._process_temperature(temperature,
-                                                     temperature_K, 'K')
+    def set_temperature(self, temperature):
+        self.temp = temperature * units.kB
 
     def get_temperature(self):
-        return self.temperature
+        return self.temp
 
     def set_timestep(self, timestep):
         self.dt = timestep
@@ -106,7 +77,7 @@ class NVTBerendsen(MolecularDynamics):
         old_temperature = self.atoms.get_temperature()
 
         scl_temperature = np.sqrt(1.0 +
-                                  (self.temperature / old_temperature - 1.0) *
+                                  (self.temp / units.kB / old_temperature - 1.0) *
                                   tautscl)
         # Limit the velocity scaling to reasonable values
         if scl_temperature > 1.1:

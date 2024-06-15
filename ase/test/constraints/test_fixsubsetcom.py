@@ -6,7 +6,7 @@ from ase import Atoms
 from ase.build import molecule
 from ase.calculators.emt import EMT
 from ase.constraints import FixSubsetCom
-from ase.md.velocitydistribution import MaxwellBoltzmannDistribution
+from ase.md.velocitydistribution import maxwell_boltzmann_distribution
 from ase.optimize import BFGS
 
 
@@ -44,7 +44,7 @@ def test_center_of_mass_velocity(atoms: Atoms):
     atoms.set_constraint(FixSubsetCom(indices=indices))
 
     # `adjust_momenta` of constaints are applied inside
-    MaxwellBoltzmannDistribution(atoms, temperature_K=300.0)
+    maxwell_boltzmann_distribution(atoms, temperature=300.0)
 
     momenta = atoms.get_momenta()
     masses = atoms.get_masses()

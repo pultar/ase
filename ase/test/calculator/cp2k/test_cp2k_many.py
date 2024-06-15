@@ -10,7 +10,7 @@ from ase import units
 from ase.atoms import Atoms
 from ase.build import molecule
 from ase.calculators.calculator import CalculatorSetupError
-from ase.md.velocitydistribution import MaxwellBoltzmannDistribution
+from ase.md.velocitydistribution import maxwell_boltzmann_distribution
 from ase.md.verlet import VelocityVerlet
 from ase.optimize import BFGS
 
@@ -88,7 +88,7 @@ def test_md(cp2k_factory):
     atoms = Atoms('HH', positions=positions, calculator=calc)
     atoms.center(vacuum=2.0)
 
-    MaxwellBoltzmannDistribution(atoms, temperature_K=0.5 * 300,
+    maxwell_boltzmann_distribution(atoms, temperature=0.5 * 300,
                                  force_temp=True)
     energy_start = atoms.get_potential_energy() + atoms.get_kinetic_energy()
     with VelocityVerlet(atoms, 0.5 * units.fs) as dyn:

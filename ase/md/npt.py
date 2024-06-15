@@ -47,15 +47,10 @@ class NPT(MolecularDynamics):
         externalstress: Optional[float] = None,
         ttime: Optional[float] = None,
         pfactor: Optional[float] = None,
-        *,
-        temperature_K: Optional[float] = None,
         mask: Optional[Union[Tuple[int], np.ndarray]] = None,
-        trajectory: Optional[str] = None,
-        logfile: Optional[Union[IO, str]] = None,
-        loginterval: int = 1,
-        append_trajectory: bool = False,
+        **md_kwargs,
     ):
-        '''Constant pressure/stress and temperature dynamics.
+        """Constant pressure/stress and temperature dynamics.
 
         Combined Nose-Hoover and Parrinello-Rahman dynamics, creating an
         NPT (or N,stress,T) ensemble.
@@ -64,7 +59,8 @@ class NPT(MolecularDynamics):
         modified by Melchionna [2].  The differential equations are integrated
         using a centered difference method [3].  See also NPTdynamics.tex
 
-        The dynamics object is called with the following parameters:
+        Parameters
+        ----------
 
         atoms: Atoms object
             The list of atoms.
@@ -72,14 +68,11 @@ class NPT(MolecularDynamics):
         timestep: float
             The timestep in units matching eV, Å, u.
 
-        temperature: float (deprecated)
-            The desired temperature in eV.
-
-        temperature_K: float
+        temperature: float
             The desired temperature in K.
 
         externalstress: float or nparray
-            The external stress in eV/A^3.  Either a symmetric
+            The external stress in eV/A^3. Either a symmetric
             3x3 tensor, a 6-vector representing the same, or a
             scalar representing the pressure.  Note that the
             stress is positive in tension whereas the pressure is
@@ -143,19 +136,14 @@ class NPT(MolecularDynamics):
 
         4) F. D. Di Tolla and M. Ronchetti, Physical
            Review E 48, p. 1726 (1993).
+        """
+        MolecularDynamics.__init__(self, atoms, timestep, **md_kwargs)
 
-        '''
-
-        MolecularDynamics.__init__(self, atoms, timestep, trajectory,
-                                   logfile, loginterval,
-                                   append_trajectory=append_trajectory)
-        # self.atoms = atoms
-        # self.timestep = timestep
         if externalstress is None and pfactor is not None:
             raise TypeError("Missing 'externalstress' argument.")
+
         self.zero_center_of_mass_momentum(verbose=1)
-        self.temperature = units.kB * self._process_temperature(
-            temperature, temperature_K, 'eV')
+        self.temp = units.kB * temperature
         if externalstress is not None:
             self.set_stress(externalstress)
         self.set_mask(mask)
@@ -169,19 +157,9 @@ class NPT(MolecularDynamics):
         self.timeelapsed = 0.0
         self.frac_traceless = 1
 
-    def set_temperature(self, temperature=None, *, temperature_K=None):
-        """Set the temperature.
-
-        Parameters:
-
-        temperature: float (deprecated)
-            The new temperature in eV.  Deprecated, use ``temperature_K``.
-
-        temperature_K: float (keyword-only argument)
-            The new temperature, in K.
-        """
-        self.temperature = units.kB * self._process_temperature(
-            temperature, temperature_K, 'eV')
+    def set_temperature(self, temperature):
+        """Set the temperature."""
+        self.temp = units.kB * temperature
         self._calculateconstants()
 
     def set_stress(self, stress):
@@ -417,9 +395,9 @@ class NPT(MolecularDynamics):
                  self.atoms.get_kinetic_energy()
                  - np.sum(self.externalstress[0:3]) * linalg.det(self.h) / 3.0)
         if self.ttime is not None:
-            gibbs += (1.5 * n * self.temperature *
+            gibbs += (1.5 * n * self.temp *
                       (self.ttime * self.zeta)**2 +
-                      3 * self.temperature * (n - 1) * self.zeta_integrated)
+                      3 * self.temp * (n - 1) * self.zeta_integrated)
         else:
             assert self.zeta == 0.0
         if self.pfactor_given is not None:
@@ -493,7 +471,7 @@ class NPT(MolecularDynamics):
     def get_init_data(self):
         "Return the data needed to initialize a new NPT dynamics."
         return {'dt': self.dt,
-                'temperature': self.temperature,
+                'temperature': self.temp / units.kB,
                 'desiredEkin': self.desiredEkin,
                 'externalstress': self.externalstress,
                 'mask': self.mask,
@@ -648,14 +626,14 @@ class NPT(MolecularDynamics):
         if self.ttime is None:
             self.tfact = 0.0
         else:
-            self.tfact = 2.0 / (3 * n * self.temperature *
+            self.tfact = 2.0 / (3 * n * self.temp *
                                 self.ttime * self.ttime)
         if self.pfactor_given is None:
             self.pfact = 0.0
         else:
             self.pfact = 1.0 / (self.pfactor_given * linalg.det(self._getbox()))
-            # self.pfact = 1.0/(n * self.temperature * self.ptime * self.ptime)
-        self.desiredEkin = 1.5 * (n - 1) * self.temperature
+            # self.pfact = 1.0/(n * self.temp * self.ptime * self.ptime)
+        self.desiredEkin = 1.5 * (n - 1) * self.temp
 
     def _setbox_and_positions(self, h, q):
         """Set the computational box and the positions."""

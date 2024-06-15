@@ -13,20 +13,13 @@ class NPTBerendsen(NVTBerendsen):
         self,
         atoms: Atoms,
         timestep: float,
-        temperature: Optional[float] = None,
-        *,
-        temperature_K: Optional[float] = None,
-        pressure: Optional[float] = None,
-        pressure_au: Optional[float] = None,
+        temperature: float,
+        pressure: float,
         taut: float = 0.5e3 * units.fs,
         taup: float = 1e3 * units.fs,
         compressibility: Optional[float] = None,
-        compressibility_au: Optional[float] = None,
         fixcm: bool = True,
-        trajectory: Optional[str] = None,
-        logfile: Optional[Union[IO, str]] = None,
-        loginterval: int = 1,
-        append_trajectory: bool = False,
+        **md_kwargs,
     ):
         """Berendsen (constant N, P, T) molecular dynamics.
 
@@ -34,7 +27,8 @@ class NPTBerendsen(NVTBerendsen):
         pressure and temperature.  The shape of the simulation cell is not
         altered, if that is desired use Inhomogenous_NPTBerendsen.
 
-        Parameters:
+        Parameters
+        ----------
 
         atoms: Atoms object
             The list of atoms.
@@ -44,13 +38,6 @@ class NPTBerendsen(NVTBerendsen):
 
         temperature: float
             The desired temperature, in Kelvin.
-
-        temperature_K: float
-            Alias for ``temperature``.
-
-        pressure: float (deprecated)
-            The desired pressure, in bar (1 bar = 1e5 Pa).  Deprecated,
-            use ``pressure_au`` instead.
 
         pressure: float
             The desired pressure, in atomic units (eV/Å^3).
@@ -62,57 +49,20 @@ class NPTBerendsen(NVTBerendsen):
         taup: float
             Time constant for Berendsen pressure coupling.  Default: 1 ps.
 
-        compressibility: float (deprecated)
-            The compressibility of the material, in bar-1.  Deprecated,
-            use ``compressibility_au`` instead.
-
-        compressibility_au: float
+        compressibility: float
             The compressibility of the material, in atomic units (Å^3/eV).
 
         fixcm: bool (optional)
             If True, the position and momentum of the center of mass is
             kept unperturbed.  Default: True.
-
-        trajectory: Trajectory object or str (optional)
-            Attach trajectory object.  If *trajectory* is a string a
-            Trajectory will be constructed.  Use *None* for no
-            trajectory.
-
-        logfile: file object or str (optional)
-            If *logfile* is a string, a file with that name will be opened.
-            Use '-' for stdout.
-
-        loginterval: int (optional)
-            Only write a log line for every *loginterval* time steps.
-            Default: 1
-
-        append_trajectory: boolean (optional)
-            Defaults to False, which causes the trajectory file to be
-            overwriten each time the dynamics is restarted from scratch.
-            If True, the new structures are appended to the trajectory
-            file instead.
-
-
         """
 
         NVTBerendsen.__init__(self, atoms, timestep, temperature=temperature,
-                              temperature_K=temperature_K,
-                              taut=taut, fixcm=fixcm, trajectory=trajectory,
-                              logfile=logfile, loginterval=loginterval,
-                              append_trajectory=append_trajectory)
+                              taut=taut, fixcm=fixcm, **md_kwargs)
+
         self.taup = taup
-        self.pressure = self._process_pressure(pressure, pressure_au)
-        if compressibility is not None and compressibility_au is not None:
-            raise TypeError(
-                "Do not give both 'compressibility' and 'compressibility_au'")
-        if compressibility is not None:
-            # Specified in bar, convert to atomic units
-            warnings.warn(FutureWarning(
-                "Specify the compressibility in atomic units."))
-            self.set_compressibility(
-                compressibility_au=compressibility / (1e5 * units.Pascal))
-        else:
-            self.set_compressibility(compressibility_au=compressibility_au)
+        self.pressure = pressure
+        self.compressibility = compressibility
 
     def set_taup(self, taup):
         self.taup = taup
@@ -120,16 +70,14 @@ class NPTBerendsen(NVTBerendsen):
     def get_taup(self):
         return self.taup
 
-    def set_pressure(self, pressure=None, *, pressure_au=None,
-                     pressure_bar=None):
-        self.pressure = self._process_pressure(pressure, pressure_bar,
-                                               pressure_au)
+    def set_pressure(self, pressure):
+        self.pressure = pressure
 
     def get_pressure(self):
         return self.pressure
 
-    def set_compressibility(self, *, compressibility_au):
-        self.compressibility = compressibility_au
+    def set_compressibility(self, compressibility):
+        self.compressibility = compressibility
 
     def get_compressibility(self):
         return self.compressibility
@@ -190,41 +138,6 @@ class NPTBerendsen(NVTBerendsen):
         atoms.set_momenta(self.atoms.get_momenta() + 0.5 * self.dt * forces)
 
         return forces
-
-    def _process_pressure(self, pressure, pressure_au):
-        """Handle that pressure can be specified in multiple units.
-
-        For at least a transition period, Berendsen NPT dynamics in ASE can
-        have the pressure specified in either bar or atomic units (eV/Å^3).
-
-        Two parameters:
-
-        pressure: None or float
-            The original pressure specification in bar.
-            A warning is issued if this is not None.
-
-        pressure_au: None or float
-            Pressure in ev/Å^3.
-
-        Exactly one of the two pressure parameters must be different from
-        None, otherwise an error is issued.
-
-        Return value: Pressure in eV/Å^3.
-        """
-        if (pressure is not None) + (pressure_au is not None) != 1:
-            raise TypeError("Exactly one of the parameters 'pressure',"
-                            + " and 'pressure_au' must"
-                            + " be given")
-
-        if pressure is not None:
-            w = ("The 'pressure' parameter is deprecated, please"
-                 + " specify the pressure in atomic units (eV/Å^3)"
-                 + " using the 'pressure_au' parameter.")
-            warnings.warn(FutureWarning(w))
-            return pressure * (1e5 * units.Pascal)
-        else:
-            return pressure_au
-
 
 class Inhomogeneous_NPTBerendsen(NPTBerendsen):
     """Berendsen (constant N, P, T) molecular dynamics.

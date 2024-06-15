@@ -32,7 +32,7 @@ def fmax(forces):
 
 md_cls_and_kwargs = [
     (VelocityVerlet, {}),
-    (Langevin, {"temperature_K": 300, "friction": 0.02}),
+    (Langevin, {"temperature": 300, "friction": 0.02}),
 ]
 
 

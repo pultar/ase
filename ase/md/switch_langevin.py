@@ -21,48 +21,43 @@ class SwitchLangevin(Langevin):
     ----------
     path_data : numpy array
         col 1 (md-step), col 2 (lambda), col 3 (energy H1), col 4 (energy H2)
-
-    Parameters
-    ----------
-    atoms : ASE Atoms object
-        Atoms object for which MD will be run
-    calc1 : ASE calculator object
-        Calculator corresponding to first Hamiltonian
-    calc2 : ASE calculator object
-        Calculator corresponding to second Hamiltonian
-    dt : float
-        Timestep for MD simulation
-    T : float
-        Temperature in eV (deprecated)
-    friction : float
-        Friction for langevin dynamics
-    n_eq : int
-        Number of equilibration steps
-    n_switch : int
-        Number of switching steps
     """
 
     def __init__(
         self,
         atoms: Atoms,
-        calc1,
-        calc2,
-        dt: float,
-        T: Optional[float] = None,
-        friction: Optional[float] = None,
-        n_eq: Optional[int] = None,
-        n_switch: Optional[int] = None,
-        temperature_K: Optional[float] = None,
+        calc1: Any,
+        calc2: Any,
+        timestep: float,
+        temperature: float,
+        friction: float,
+        n_eq: int,
+        n_switch: int,
         **langevin_kwargs,
     ):
-        super().__init__(atoms, dt, temperature=T, temperature_K=temperature_K,
-                         friction=friction, **langevin_kwargs)
-        if friction is None:
-            raise TypeError("Missing 'friction' argument.")
-        if n_eq is None:
-            raise TypeError("Missing 'n_eq' argument.")
-        if n_switch is None:
-            raise TypeError("Missing 'n_switch' argument.")
+        """
+        Parameters
+        ----------
+        atoms: ASE Atoms object
+            Atoms object for which MD will be run
+        calc1: ASE calculator object
+            Calculator corresponding to first Hamiltonian
+        calc2: ASE calculator object
+            Calculator corresponding to second Hamiltonian
+        timestep: float
+            Timestep for MD simulation
+        temperature: float
+            Temperature in K
+        friction : float
+            Friction for langevin dynamics
+        n_eq : int
+            Number of equilibration steps
+        n_switch : int
+            Number of switching steps
+        """
+        super().__init__(atoms, timestep, temperature, friction,
+                         **langevin_kwargs)
+
         self.n_eq = n_eq
         self.n_switch = n_switch
         self.lam = 0.0

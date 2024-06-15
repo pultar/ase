@@ -40,7 +40,7 @@ def test_CO2linear_Au111_langevin(testdir):
 
     fr = 0.1
     with Langevin(slab, 2.0 * units.fs,
-                  temperature_K=300, friction=fr,
+                  temperature=300, friction=fr,
                   trajectory='langevin_%.1f.traj' % fr,
                   logfile='langevin_%.1f.log' % fr,
                   loginterval=20, rng=rng) as dyn:

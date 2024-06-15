@@ -9,8 +9,8 @@ from ase.calculators.harmonic import HarmonicCalculator, HarmonicForceField
 from ase.calculators.mixing import MixedCalculator
 from ase.geometry.geometry import get_distances_derivatives
 from ase.md.andersen import Andersen
-from ase.md.velocitydistribution import (MaxwellBoltzmannDistribution,
-                                         Stationary, ZeroRotation)
+from ase.md.velocitydistribution import (maxwell_boltzmann_distribution,
+                                         stationary, zero_rotation)
 from ase.optimize import BFGS
 from ase.units import fs
 from ase.vibrations import Vibrations
@@ -257,10 +257,10 @@ def test_thermodynamic_integration():
                                            1 - lamb, lamb)
         atoms = ref_atoms.copy()
         atoms.calc = calc_linearCombi
-        MaxwellBoltzmannDistribution(atoms, temperature_K=300, force_temp=True)
-        Stationary(atoms)
-        ZeroRotation(atoms)
-        with Andersen(atoms, 0.5 * fs, temperature_K=300, andersen_prob=0.05,
+        maxwell_boltzmann_distribution(atoms, temperature=300, force_temp=True)
+        stationary(atoms)
+        zero_rotation(atoms)
+        with Andersen(atoms, 0.5 * fs, temperature=300, andersen_prob=0.05,
                       fixcm=False) as dyn:
             for _ in dyn.irun(50):  # should be much longer for production runs
                 e0, e1 = calc_linearCombi.get_energy_contributions(atoms)
