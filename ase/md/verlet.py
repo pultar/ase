@@ -12,7 +12,7 @@ class VelocityVerlet(MolecularDynamics):
     def __init__(
         self,
         atoms: Atoms,
-        timestep: Optional[float] = None,
+        timestep: float,
         **md_kwargs,
     ):
         """

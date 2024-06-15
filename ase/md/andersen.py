@@ -118,7 +118,7 @@ class Andersen(MolecularDynamics):
 
         # apply Andersen thermostat
         self.random_velocity = self.get_maxwell_boltzmann_velocities()
-        self.andersen_chance = self.rng.random_sample(size=self.v.shape)
+        self.andersen_chance = self.rng.random(size=self.v.shape)
         self.communicator.broadcast(self.random_velocity, 0)
         self.communicator.broadcast(self.andersen_chance, 0)
         self.v[self.andersen_chance <= self.andersen_prob] \
