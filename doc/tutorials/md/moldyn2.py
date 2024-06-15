@@ -2,7 +2,7 @@
 
 from ase import units
 from ase.lattice.cubic import FaceCenteredCubic
-from ase.md.velocitydistribution import MaxwellBoltzmannDistribution
+from ase.md.velocitydistribution import maxwell_boltzmann_distribution
 from ase.md.verlet import VelocityVerlet
 
 # Use Asap for a huge performance increase if it is installed
@@ -25,7 +25,7 @@ atoms = FaceCenteredCubic(directions=[[1, 0, 0], [0, 1, 0], [0, 0, 1]],
 atoms.calc = EMT()
 
 # Set the momenta corresponding to T=300K
-MaxwellBoltzmannDistribution(atoms, temperature_K=300)
+maxwell_boltzmann_distribution(atoms, temperature=300)
 
 # We want to run MD with constant energy using the VelocityVerlet algorithm.
 dyn = VelocityVerlet(atoms, 5 * units.fs)  # 5 fs time step.

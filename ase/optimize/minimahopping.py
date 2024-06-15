@@ -4,7 +4,7 @@ import numpy as np
 
 from ase import io, units
 from ase.md import MDLogger, VelocityVerlet
-from ase.md.velocitydistribution import MaxwellBoltzmannDistribution
+from ase.md.velocitydistribution import maxwell_boltzmann_distribution
 from ase.optimize import QuasiNewton
 from ase.parallel import paropen, world
 
@@ -310,8 +310,8 @@ class MinimaHopping:
             self._log('msg', 'Starting MD with %i existing energies.' %
                       len(energies))
         if not thermalized:
-            MaxwellBoltzmannDistribution(self._atoms,
-                                         temperature_K=self._temperature,
+            maxwell_boltzmann_distribution(self._atoms,
+                                         temperature=self._temperature,
                                          force_temp=True)
         traj = io.Trajectory('md%05i.traj' % self._counter, 'a',
                              self._atoms)

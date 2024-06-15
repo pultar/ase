@@ -9,56 +9,6 @@ from ase.io.trajectory import Trajectory
 from ase.md.logger import MDLogger
 from ase.optimize.optimize import Dynamics
 
-
-def process_temperature(
-    temperature: Optional[float],
-    temperature_K: Optional[float],
-    orig_unit: str,
-) -> float:
-    """Handle that temperature can be specified in multiple units.
-
-    For at least a transition period, molecular dynamics in ASE can
-    have the temperature specified in either Kelvin or Electron
-    Volt.  The different MD algorithms had different defaults, by
-    forcing the user to explicitly choose a unit we can resolve
-    this.  Using the original method then will issue a
-    FutureWarning.
-
-    Four parameters:
-
-    temperature: None or float
-        The original temperature specification in whatever unit was
-        historically used.  A warning is issued if this is not None and
-        the historical unit was eV.
-
-    temperature_K: None or float
-        Temperature in Kelvin.
-
-    orig_unit: str
-        Unit used for the `temperature`` parameter.  Must be 'K' or 'eV'.
-
-    Exactly one of the two temperature parameters must be different from
-    None, otherwise an error is issued.
-
-    Return value: Temperature in Kelvin.
-    """
-    if (temperature is not None) + (temperature_K is not None) != 1:
-        raise TypeError("Exactly one of the parameters 'temperature',"
-                        + " and 'temperature_K', must be given")
-    if temperature is not None:
-        w = "Specify the temperature in K using the 'temperature_K' argument"
-        if orig_unit == 'K':
-            return temperature
-        elif orig_unit == 'eV':
-            warnings.warn(FutureWarning(w))
-            return temperature / units.kB
-        else:
-            raise ValueError("Unknown temperature unit " + orig_unit)
-
-    assert temperature_K is not None
-    return temperature_K
-
-
 class MolecularDynamics(Dynamics):
     """Base-class for all MD classes."""
 
@@ -100,7 +50,9 @@ class MolecularDynamics(Dynamics):
             If True, the new structures are appended to the trajectory
             file instead.
         """
-        # dt as to be attached _before_ parent class is initialized
+        if timestep is None:
+            raise TypeError('Missing timestep argument')
+
         self.dt = timestep
 
         super().__init__(atoms, logfile=None, trajectory=None)
@@ -189,9 +141,3 @@ class MolecularDynamics(Dynamics):
         Internal use only. This function can be reimplemented by Asap.
         """
         return np.dot(self.masses.ravel(), velocity) / self.masses.sum()
-
-    # Make the process_temperature function available to subclasses
-    # as a static method.  This makes it easy for MD objects to use
-    # it, while functions in md.velocitydistribution have access to it
-    # as a function.
-    _process_temperature = staticmethod(process_temperature)

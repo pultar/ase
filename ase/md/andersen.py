@@ -1,7 +1,7 @@
 """Andersen dynamics class."""
 from typing import IO, Optional, Union
 
-from numpy import cos, log, ones, pi, random, repeat
+import numpy as np
 
 from ase import Atoms, units
 from ase.md.md import MolecularDynamics
@@ -15,18 +15,16 @@ class Andersen(MolecularDynamics):
         self,
         atoms: Atoms,
         timestep: float,
-        temperature_K: float,
+        temperature: float,
         andersen_prob: float,
         fixcm: bool = True,
-        trajectory: Optional[str] = None,
-        logfile: Optional[Union[IO, str]] = None,
-        loginterval: int = 1,
         communicator=world,
-        rng=random,
-        append_trajectory: bool = False,
+        rng=np.random.default_rng(),
+        **md_kwargs,
     ):
-        """"
-        Parameters:
+        """
+        Parameters
+        ----------
 
         atoms: Atoms object
             The list of atoms.
@@ -34,7 +32,7 @@ class Andersen(MolecularDynamics):
         timestep: float
             The time step in ASE time units.
 
-        temperature_K: float
+        temperature: float
             The desired temperature, in Kelvin.
 
         andersen_prob: float
@@ -50,24 +48,9 @@ class Andersen(MolecularDynamics):
             random_sample method matching the signature of
             numpy.random.random_sample.
 
-        logfile: file object or str (optional)
-            If *logfile* is a string, a file with that name will be opened.
-            Use '-' for stdout.
-
-        trajectory: Trajectory object or str (optional)
-            Attach trajectory object. If *trajectory* is a string a
-            Trajectory will be constructed. Use *None* (the default) for no
-            trajectory.
-
         communicator: MPI communicator (optional)
             Communicator used to distribute random numbers to all tasks.
             Default: ase.parallel.world. Set to None to disable communication.
-
-        append_trajectory: bool (optional)
-            Defaults to False, which causes the trajectory file to be
-            overwritten each time the dynamics is restarted from scratch.
-            If True, the new structures are appended to the trajectory
-            file instead.
 
         The temperature is imposed by stochastic collisions with a heat bath
         that acts on velocity components of randomly chosen particles.
@@ -76,19 +59,19 @@ class Andersen(MolecularDynamics):
 
         H. C. Andersen, J. Chem. Phys. 72 (4), 2384–2393 (1980)
         """
-        self.temp = units.kB * temperature_K
+        self.temp = units.kB * temperature
         self.andersen_prob = andersen_prob
         self.fix_com = fixcm
         self.rng = rng
+
         if communicator is None:
             communicator = DummyMPI()
         self.communicator = communicator
-        MolecularDynamics.__init__(self, atoms, timestep, trajectory,
-                                   logfile, loginterval,
-                                   append_trajectory=append_trajectory)
 
-    def set_temperature(self, temperature_K):
-        self.temp = units.kB * temperature_K
+        MolecularDynamics.__init__(self, atoms, timestep, **md_kwargs)
+
+    def set_temperature(self, temperature):
+        self.temp = units.kB * temperature
 
     def set_andersen_prob(self, andersen_prob):
         self.andersen_prob = andersen_prob
@@ -97,14 +80,14 @@ class Andersen(MolecularDynamics):
         self.dt = timestep
 
     def boltzmann_random(self, width, size):
-        x = self.rng.random_sample(size=size)
-        y = self.rng.random_sample(size=size)
-        z = width * cos(2 * pi * x) * (-2 * log(1 - y))**0.5
+        x = self.rng.random(size=size)
+        y = self.rng.random(size=size)
+        z = width * np.cos(2 * np.pi * x) * (-2 * np.log(1 - y))**0.5
         return z
 
     def get_maxwell_boltzmann_velocities(self):
         natoms = len(self.atoms)
-        masses = repeat(self.masses, 3).reshape(natoms, 3)
+        masses = np.repeat(self.masses, 3).reshape(natoms, 3)
         width = (self.temp / masses)**0.5
         velos = self.boltzmann_random(width, size=(natoms, 3))
         return velos  # [[x, y, z],] components for each atom
@@ -126,7 +109,7 @@ class Andersen(MolecularDynamics):
         if self.fix_com:
             # add random velocity to center of mass to prepare Andersen
             width = (self.temp / sum(self.masses))**0.5
-            self.random_com_velocity = (ones(self.v.shape)
+            self.random_com_velocity = (np.ones(self.v.shape)
                                         * self.boltzmann_random(width, (3)))
             self.communicator.broadcast(self.random_com_velocity, 0)
             self.v += self.random_com_velocity
@@ -135,7 +118,7 @@ class Andersen(MolecularDynamics):
 
         # apply Andersen thermostat
         self.random_velocity = self.get_maxwell_boltzmann_velocities()
-        self.andersen_chance = self.rng.random_sample(size=self.v.shape)
+        self.andersen_chance = self.rng.random(size=self.v.shape)
         self.communicator.broadcast(self.random_velocity, 0)
         self.communicator.broadcast(self.andersen_chance, 0)
         self.v[self.andersen_chance <= self.andersen_prob] \

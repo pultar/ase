@@ -598,7 +598,7 @@ Algorithms:
   (:mr:`2060`)
 
 * Changed units for molecular dynamics modules.  They now accept the
-  temperature in Kelvin as a keyword-only argument ``temperature_K``
+  temperature in Kelvin as a keyword-only argument ``temperature``
   and Berendsen NPT accepts the pressure in eV/Å³ as a keyword-only
   argument ``pressure_au``. The previous arguments are still
   available and still take temperature and pressure in whatever unit

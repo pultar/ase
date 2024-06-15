@@ -2,7 +2,7 @@ import numpy as np
 import pytest
 
 from ase.build import molecule
-from ase.md.velocitydistribution import Stationary, ZeroRotation
+from ase.md.velocitydistribution import stationary, zero_rotation
 
 norm = np.linalg.norm
 
@@ -19,7 +19,7 @@ def atoms():
 @pytest.fixture()
 def stationary_atoms(atoms):
     atoms = atoms.copy()
-    Stationary(atoms)
+    stationary(atoms)
     return atoms
 
 
@@ -50,7 +50,7 @@ def test_stationary_propagate(atoms, stationary_atoms):
 
 def test_zero_rotation(atoms):
     mom1 = atoms.get_angular_momentum()
-    ZeroRotation(atoms)
+    zero_rotation(atoms)
     mom2 = atoms.get_angular_momentum()
     assert norm(mom1) > 0.1
     assert norm(mom2) < 1e-13

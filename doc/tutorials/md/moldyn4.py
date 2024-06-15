@@ -1,8 +1,8 @@
 """Demonstrates molecular dynamics for isolated particles."""
 from ase import units
 from ase.cluster.cubic import FaceCenteredCubic
-from ase.md.velocitydistribution import (MaxwellBoltzmannDistribution,
-                                         Stationary, ZeroRotation)
+from ase.md.velocitydistribution import (maxwell_boltzmann_distribution,
+                                         stationary, zero_rotation)
 from ase.md.verlet import VelocityVerlet
 from ase.optimize import QuasiNewton
 
@@ -30,9 +30,9 @@ qn = QuasiNewton(atoms)
 qn.run(0.001, 10)
 
 # Set the momenta corresponding to T=1200K
-MaxwellBoltzmannDistribution(atoms, temperature_K=1200)
-Stationary(atoms)  # zero linear momentum
-ZeroRotation(atoms)  # zero angular momentum
+maxwell_boltzmann_distribution(atoms, temperature=1200)
+stationary(atoms)  # zero linear momentum
+zero_rotation(atoms)  # zero angular momentum
 
 # We want to run MD using the VelocityVerlet algorithm.
 

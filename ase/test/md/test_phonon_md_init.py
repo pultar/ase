@@ -50,7 +50,7 @@ def test_phonon_md_init(asap3, testdir):
     Etots = []
 
     for i in range(24):
-        PhononHarmonics(atoms, K, temperature_K=T, quantum=True,
+        PhononHarmonics(atoms, K, temperature=T, quantum=True,
                         rng=np.random.RandomState(888 + i))
 
         Epot = atoms.get_potential_energy() - Epotref

@@ -4,8 +4,8 @@ from ase import units
 from ase.build import bulk
 from ase.calculators.emt import EMT
 from ase.md.langevin import Langevin
-from ase.md.velocitydistribution import (MaxwellBoltzmannDistribution,
-                                         Stationary)
+from ase.md.velocitydistribution import (maxwell_boltzmann_distribution,
+                                         stationary)
 
 
 def test_langevin_com():
@@ -24,15 +24,15 @@ def test_langevin_com():
     atoms.pbc = False
     atoms.calc = EMT()
 
-    MaxwellBoltzmannDistribution(atoms, temperature_K=T)
-    Stationary(atoms)
+    maxwell_boltzmann_distribution(atoms, temperature=T)
+    stationary(atoms)
 
     mtot = atoms.get_momenta().sum(axis=0)
     print('initial momenta', mtot)
     print('initial forces', atoms.get_forces().sum(axis=0))
 
     # run NVT
-    with Langevin(atoms, dt * units.fs, temperature_K=T, friction=0.02) as dyn:
+    with Langevin(atoms, dt * units.fs, temperature=T, friction=0.02) as dyn:
         dyn.run(10)
 
     m2 = atoms.get_momenta().sum(axis=0)

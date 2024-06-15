@@ -5,7 +5,7 @@ from ase import units
 from ase.build import bulk
 from ase.calculators.harmonic import SpringCalculator
 from ase.md.switch_langevin import SwitchLangevin
-from ase.md.velocitydistribution import MaxwellBoltzmannDistribution
+from ase.md.velocitydistribution import maxwell_boltzmann_distribution
 
 
 @pytest.mark.slow()
@@ -36,17 +36,17 @@ def test_langevin_switching():
 
     # switch_forward
     with SwitchLangevin(atoms, calc1, calc2, dt * units.fs,
-                        temperature_K=T, friction=0.01,
+                        temperature=T, friction=0.01,
                         n_eq=n_steps, n_switch=n_steps) as dyn_forward:
-        MaxwellBoltzmannDistribution(atoms, temperature_K=2 * T)
+        maxwell_boltzmann_distribution(atoms, temperature=2 * T)
         dyn_forward.run()
         dF_forward = dyn_forward.get_free_energy_difference() / len(atoms)
 
     # switch_backwards
     with SwitchLangevin(atoms, calc2, calc1, dt * units.fs,
-                        temperature_K=T, friction=0.01,
+                        temperature=T, friction=0.01,
                         n_eq=n_steps, n_switch=n_steps) as dyn_backward:
-        MaxwellBoltzmannDistribution(atoms, temperature_K=2 * T)
+        maxwell_boltzmann_distribution(atoms, temperature=2 * T)
         dyn_backward.run()
         dF_backward = -dyn_backward.get_free_energy_difference() / len(atoms)
 

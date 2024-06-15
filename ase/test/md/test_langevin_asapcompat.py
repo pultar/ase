@@ -2,8 +2,8 @@ from ase import units
 from ase.build import bulk
 from ase.calculators.emt import EMT
 from ase.md.langevin import Langevin
-from ase.md.velocitydistribution import (MaxwellBoltzmannDistribution,
-                                         Stationary)
+from ase.md.velocitydistribution import (maxwell_boltzmann_distribution,
+                                         stationary)
 
 
 def test_langevin_asapcompat():
@@ -18,9 +18,9 @@ def test_langevin_asapcompat():
     atoms.pbc = False
     atoms.calc = EMT()
 
-    MaxwellBoltzmannDistribution(atoms, temperature_K=T)
-    Stationary(atoms)
-    with Langevin(atoms, dt * units.fs, temperature_K=T, friction=0.02) as dyn:
+    maxwell_boltzmann_distribution(atoms, temperature=T)
+    stationary(atoms)
+    with Langevin(atoms, dt * units.fs, temperature=T, friction=0.02) as dyn:
         dyn.run(1)
 
     for attrib in ('temp', 'fr', 'c1', 'c2', 'c3', 'c4',

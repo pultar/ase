@@ -4,8 +4,8 @@ import pytest
 from ase.build import bulk
 from ase.io import Trajectory, read
 from ase.md import Andersen, Langevin, VelocityVerlet
-from ase.md.velocitydistribution import (MaxwellBoltzmannDistribution,
-                                         Stationary)
+from ase.md.velocitydistribution import (maxwell_boltzmann_distribution,
+                                         stationary)
 from ase.units import fs
 
 
@@ -21,7 +21,7 @@ def test_verlet_thermostats_asap(asap3, testdir, allraise):
     a = bulk('Au').repeat((4, 4, 4))
     a[5].symbol = 'Ag'
 
-    # test thermalization by MaxwellBoltzmannDistribution
+    # test thermalization by maxwell_boltzmann_distribution
     thermalize(T_high, a, rng)
     assert abs(a.get_temperature() - T_high) < 0.0001
 
@@ -38,7 +38,7 @@ def test_verlet_thermostats_asap(asap3, testdir, allraise):
     # test reproduction of Verlet by Langevin and Andersen for thermostats
     # switched off
     pos_verlet = [t.get_positions() for t in traj_verlet[:3]]
-    md_kwargs.update({'temperature_K': T_high})
+    md_kwargs.update({'temperature': T_high})
     for MDalgo in [Langevin, Andersen]:
         a_md, traj = prepare_md(a, calculator)
         with traj:
@@ -91,6 +91,6 @@ def prepare_md(atoms, calculator):
 
 
 def thermalize(temp, atoms, rng):
-    MaxwellBoltzmannDistribution(atoms, temperature_K=temp, force_temp=True,
+    maxwell_boltzmann_distribution(atoms, temperature=temp, force_temp=True,
                                  rng=rng)
-    Stationary(atoms)
+    stationary(atoms)

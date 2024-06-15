@@ -4,7 +4,7 @@ import pytest
 from ase.build import bulk
 from ase.calculators.idealgas import IdealGas
 from ase.md import VelocityVerlet
-from ase.md.velocitydistribution import MaxwellBoltzmannDistribution
+from ase.md.velocitydistribution import maxwell_boltzmann_distribution
 from ase.units import kB
 
 
@@ -19,7 +19,7 @@ def test_idealgas():
 
     md_temp = 1000
 
-    MaxwellBoltzmannDistribution(atoms, temperature_K=md_temp, rng=rng)
+    maxwell_boltzmann_distribution(atoms, temperature=md_temp, rng=rng)
     print(f"Temperature: {atoms.get_temperature()} K")
 
     with VelocityVerlet(atoms, timestep=0.1) as md:
