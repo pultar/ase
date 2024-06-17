@@ -51,7 +51,7 @@ class CLICommand:
             if val is None:
                 continue
             print()
-            print_pluggables(kind, val)
+            print_pluggables(kind, val or None)
 
 
 def print_file_info(args):
