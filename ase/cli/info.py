@@ -101,7 +101,7 @@ def print_info():
         print(f'{name:24} {path}')
 
 
-def print_pluggables(kind: str, allowed_names:Optional[List[str]] = None):
+def print_pluggables(kind: str, allowed_names: Optional[List[str]] = None):
     import ase.plugins as plugins
     to_print = getattr(plugins, kind)
     if allowed_names is not None:
@@ -111,7 +111,7 @@ def print_pluggables(kind: str, allowed_names:Optional[List[str]] = None):
             return any(pattern in name
                        for (pattern, name) in
                        product(allowed_names, pluggable.lowercase_names)
-                      )
+                       )
     else:
         filter = None  # type: ignore[assignment]
 
