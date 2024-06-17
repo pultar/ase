@@ -2,6 +2,8 @@
 # Try to avoid module level import statements here to reduce
 # import time during CLI execution
 
+from itertools import product
+
 
 class CLICommand:
     """Print information about files or system.
@@ -44,12 +46,12 @@ class CLICommand:
             from ase.config import cfg
             cfg.print_everything()
 
-        for i in ('io_formats', 'calculators', 'viewers', 'plugins'):
-            val = getattr(args, i)
+        for kind in ('io_formats', 'calculators', 'viewers', 'plugins'):
+            val = getattr(args, kind)
             if val is None:
                 continue
             print()
-            print_pluggables(i, val or None)
+            print_pluggables(kind, val)
 
 
 def print_file_info(args):
@@ -98,18 +100,17 @@ def print_info():
         print(f'{name:24} {path}')
 
 
-def print_pluggables(i, only_given=None):
+def print_pluggables(kind:str, allowed_names=None):
     import ase.plugins as plugins
-    to_print = getattr(plugins, i)
-    if only_given:
-        only_given = [i.lower() for i in only_given]
+    to_print = getattr(plugins, kind)
+    if allowed_names is not None:
+        allowed_names = [kind.lower() for kind in allowed_names]
 
         def filter(pluggable):
-            for i in pluggable.lowercase_names:
-                for j in only_given:
-                    if j in i:
-                        return True
-            return False
+            return any(pattern in name
+                       for (pattern, name) in
+                       product(allowed_names, pluggable.lowercase_names)
+                      )
     else:
         filter = None
 
