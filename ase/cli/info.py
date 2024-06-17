@@ -3,6 +3,7 @@
 # import time during CLI execution
 
 from itertools import product
+from typing import Optional, List
 
 
 class CLICommand:
@@ -100,7 +101,7 @@ def print_info():
         print(f'{name:24} {path}')
 
 
-def print_pluggables(kind:str, allowed_names=None):
+def print_pluggables(kind: str, allowed_names:Optional[List[str]] = None):
     import ase.plugins as plugins
     to_print = getattr(plugins, kind)
     if allowed_names is not None:
