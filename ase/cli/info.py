@@ -113,6 +113,6 @@ def print_pluggables(kind: str, allowed_names:Optional[List[str]] = None):
                        product(allowed_names, pluggable.lowercase_names)
                       )
     else:
-        filter = None
+        filter = None  # type: ignore[assignment]
 
     print(to_print.info(filter=filter))
