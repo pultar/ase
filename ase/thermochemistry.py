@@ -164,7 +164,7 @@ class HarmonicThermo(ThermoChem):
 
 class quasiHarmonicThermo(HarmonicThermo):
     """Subclass of :class:`HarmonicThermo`, including the quasi-harmonic
-    approximation of Truhlar *et al.* :doi:`10.1021/jp205508z`.
+    approximation of Cramer, Truhlar and coworkers. :doi:`10.1021/jp205508z`.
 
     Inputs:
 
@@ -356,6 +356,88 @@ class HarmonicThermo_msRRHO(HarmonicThermo):
         write(fmt % ('S_tot', S, S * temperature))
         write('=' * 49)
         return S
+    
+    def _damped_vibrational_energy_contribution(self, temperature):
+        
+        H_v_damp = 0.
+        R = units._k * units._Nav
+
+        for n, freq in enumerate(self.frequencies):
+            x = units._hplanck * freq / units._k
+            comp = R * x * ( 0.5 + 1 / ( np.exp(x / temperature) - 1 ) )
+
+            H_v_damp += self._head_gordon_damp(freq) * comp
+
+        return H_v_damp
+    
+    def _damped_free_rotor_energy_contribution(self, temperature):
+
+        H_r_damp = 0.
+        R = units._k * units._Nav
+        for n, freq in enumerate(self.frequencies):
+            comp = 0.5 * R * temperature
+            H_r_damp += 1 - self._head_gordon_damp(freq) * comp
+        
+        return H_r_damp
+
+    def get_msRRHO_energy(self, temperature, verbose=True) -> float:
+        """Calculate the msRRHO energy (eV) at a specified temperature (K)
+
+        Inputs:
+        temperature : float
+            The temperature in Kelvin.
+        verbose : bool
+            If True, print the energy components.
+        Returns:
+        float : The energy in eV.
+        """
+        
+        from scipy.special import iv
+        self.verbose = verbose
+        write = self._vprint
+        fmt = '%-15s%13.3f eV'
+        write('Internal energy components at T = %.2f K:' % temperature)
+        write('=' * 31)
+
+        U = 0
+        write(fmt % ('E_pot', self.potentialenergy))
+        U = self.potentialenergy
+
+        H_corr = 0
+
+        #Only for printing
+        zpe = self.get_ZPE_correction()
+        write(fmt % ('E_ZPE', zpe))
+
+        #Only for printing 
+        H_vib = self._vibrational_energy_contribution(temperature)
+        write(fmt % ('Cv_harm (0->T)', H_vib))
+           
+
+        H_trans = 2.5 * units._k * units._Nav * temperature 
+        write(fmt % ('E_trans', H_RT))
+        H_corr += H_trans
+
+        H_rot = 1.5 * units._k * units._Nav * temperature 
+        write(fmt % ('E_rot', H_RT))
+        H_corr += H_rot
+
+        H_v_damp = self._damped_vibrational_energy_contribution(temperature)
+        write(fmt % ('E_vib_damp', H_v_damp))
+        H_corr += H_v_damp
+
+        H_r_damp = self._damped_free_rotor_energy_contribution(temperature)
+        write(fmt % ('E_rot_damp', H_r_damp))
+        H_corr += H_r_damp
+      
+        H_RT = units._k * units._Nav * temperature 
+        write(fmt % ('Thermal energy', H_RT))
+        H_corr += H_RT
+        
+        return H_corr
+  
+
+
 
 
 class HinderedThermo(ThermoChem):
@@ -1011,7 +1093,7 @@ def _clean_vib_energies(vib_energies, handling='error',
         If 'invert', the imaginary part of the frequencies will be
         multiplied by -i. See :doi:`10.1002/anie.202205735.`
         If 'raise', all imaginary frequencies will be replaced with the value
-        specified by the 'value' argument. See Truhlar et al.
+        specified by the 'value' argument. See Cramer, Truhlar and coworkers.
         :doi:`10.1021/jp205508z`.
 
     Outputs:
