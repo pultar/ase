@@ -34,11 +34,7 @@ from ase.visualize.viewers import define_viewer
 from ase.utils.plugins import ExternalIOFormat
 from ase.register.plugins import get_currently_registered_plugin
 from ase.utils.plugins import ExternalViewer
-
-if sys.version_info >= (3, 8):
-    from importlib.metadata import entry_points
-else:
-    from importlib_metadata import entry_points
+from importlib.metadata import entry_points
 
 
 def define_external_io_format(entry_point):
