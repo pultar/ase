@@ -148,8 +148,8 @@ class ViewerPluggables(Pluggables):
     item_type = AbstractPluggableViewer
 
     def info(self, prefix='', opts={}, filter=None):
-        return f"{prefix}IO Formats:\n" \
-               f"{prefix}-----------\n" + \
+        return f"{prefix}Viewers:\n" \
+               f"{prefix}--------\n" + \
                super().info(prefix + '  ', opts, filter)
 
     @lazyproperty
