@@ -820,18 +820,18 @@ def filetype(
 
     format = extension2format.get(ext, None)
     if format is not None:
-        format_name = format.name
-    elif guess:
-        format_name = ext
-        if format_name is None:
-            # Do quick xyz check:
-            lines = data.splitlines()
-            if lines and lines[0].strip().isdigit():
-                return extension2format['xyz'].name
+        return format.name
 
-            raise UnknownFileTypeError('Could not guess file type')
-        assert isinstance(format_name, str)
-    return format_name
+    if guess:
+        if ext is not None:
+            assert isinstance(ext, str)
+            return ext
+            # Do quick xyz check:
+        lines = data.splitlines()
+        if lines and lines[0].strip().isdigit():
+            return extension2format['xyz'].name
+
+    raise UnknownFileTypeError('Could not guess file type')
 
 
 def index2range(index, length):
