@@ -73,12 +73,12 @@ def register_calculators():
     register_calculator("ase.calculators.tip4p.TIP4P")
 
 
-def define_to_register(fce):
+def define_to_register(register_function):
 
     plugin = get_currently_registered_plugin()
 
     def register(*args, **kwargs):
-        out = fce(*args, **kwargs)
+        out = register_function(*args, **kwargs)
         out.plugin = plugin
         out.register()
 
