@@ -121,10 +121,7 @@ class CalculatorPluggable(Pluggable):
     def implementation(self):
         module, cls = self.cls.rsplit('.', 1)
         module = importlib.import_module(module)
-        return module.cls
-
-    def __getitem__(self, name):
-        return super().__getitem__(name).implementation
+        return getattr(module, cls)
 
 
 class CalculatorPluggables(Pluggables):
@@ -134,7 +131,7 @@ class CalculatorPluggables(Pluggables):
 
     def find_by_name(self, name):
         """ Pluggables can be found by their lowercased name (and ), too """
-        out = self.find_by('names', name.lower())
+        out = self.find_by('names', name)
         if not out:
             out = self.find_by('lowercase_names', name.lower())
         return out
@@ -143,3 +140,6 @@ class CalculatorPluggables(Pluggables):
         return f"{prefix}Calculators:\n" \
                f"{prefix}------------\n" + \
                super().info(prefix + '  ', opts, filter)
+
+    def __getitem__(self, name):
+        return super().__getitem__(name).implementation

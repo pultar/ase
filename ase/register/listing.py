@@ -18,8 +18,8 @@ def _item_attribute(obj, attribute):
 
 
 def _item_has_attribute(obj, attribute, value) -> bool:
-    for i in _item_attribute(obj, value):
-        if value == i:
+    for i in _item_attribute(obj, attribute):
+        if i == value:
             return True
     return False
 
@@ -139,7 +139,7 @@ class BaseListing(Mapping):
         The attribute can be given by list of alternative values,
         or not at all - in this case, the default value for the attribute
         will be used """
-        for i in self:
+        for i in self.values():
             if _item_has_attribute(i, attribute, value):
                 return i
 
