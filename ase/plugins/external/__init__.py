@@ -26,7 +26,6 @@ After this, call to `ase.visualize.view(atoms, viewer='my_viewer')` will be
 forwarded to `my_package.viewer.view_my_viewer` function.
 """
 
-import sys
 import warnings
 from ase.register import register_calculator
 from ase.io.formats import define_io_format
