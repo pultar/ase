@@ -1,10 +1,10 @@
 from ase.register.plugins import get_currently_registered_plugin
 from typing import Union, Optional, List, Sequence
 import numpy as np
+from ase.io.formats import define_io_format
+from ase.visualize.viewers import define_viewer
 
 # import them later to avoid a circular import
-define_io_format = None
-define_viewer = None
 
 
 def _register(pluggable_type: str, cls: str, name=None):
@@ -47,9 +47,6 @@ def register_io_format(module, desc, code, *, name=None, ext=None,
     The order of parameters is however slightly different here,
     to be as much as possible similiar to the :func:`register_calculator`
     """
-    global define_io_format
-    if not define_io_format:
-        from ase.io.formats import define_io_format
     if not name:
         name = module.rsplit(".", 1)[-1]
     fmt = define_io_format(name, desc, code,
@@ -66,9 +63,6 @@ def register_io_format(module, desc, code, *, name=None, ext=None,
 
 
 def register_viewer(name, desc, *, module=None, cli=False, fmt=None, argv=None):
-    global define_viewer
-    if not define_viewer:
-        from ase.visualize.viewers import define_viewer
     view = define_viewer(name, desc, module=module, cli=cli,
                          fmt=fmt, argv=argv, external=True)
     view.plugin = get_currently_registered_plugin()
