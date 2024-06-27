@@ -1,92 +1,11 @@
-"""
-This module contains the functionality, that is built-in into ASE
-and which is supposed to be used via plugins mechanism.
-"""
+""" This module registers all built-in io-formats. """
 
-from ase.register import register_calculator
-from ase.io.formats import define_io_format
-from ase.visualize.viewers import define_viewer
-from ase.register.plugins import get_currently_registered_plugin
-import sys
-from typing import Callable
+from ..register import register_io_format, define_to_register
 
-"""
-note: ase.register.register_io_format is just a wrapper
-to define_io_format. We call here define_io_format to
-retain the old order of the parameters (since register
-begins as all register_.... functions with implementation).
-The same holds for the viewers.
-"""
+F = define_to_register(register_io_format)
 
 
 def ase_register():
-    register_calculators()
-    register_formats()
-    register_viewers()
-
-
-def register_calculators():
-    register_calculator("ase.calculators.demon.demon.Demon")
-    register_calculator("ase.calculators.kim.kim.KIM")
-    register_calculator("ase.calculators.openmx.openmx.OpenMX")
-    register_calculator("ase.calculators.siesta.siesta.Siesta")
-    register_calculator("ase.calculators.turbomole.turbomole.Turbomole")
-    register_calculator("ase.calculators.vasp.vasp.Vasp")
-    register_calculator("ase.calculators.abinit.Abinit")
-    register_calculator("ase.calculators.acemolecule.ACE")
-    register_calculator("ase.calculators.acn.ACN")
-    register_calculator("ase.calculators.aims.Aims")
-    register_calculator("ase.calculators.amber.Amber")
-    register_calculator("ase.calculators.castep.Castep")
-    register_calculator("ase.calculators.combine_mm.CombineMM")
-    register_calculator("ase.calculators.counterions.AtomicCounterIon")
-    register_calculator("ase.calculators.cp2k.CP2K")
-    register_calculator("ase.calculators.demonnano.DemonNano")
-    register_calculator("ase.calculators.dftb.Dftb")
-    register_calculator("ase.calculators.dftd3.DFTD3")
-    register_calculator("ase.calculators.dmol.DMol3")
-    register_calculator("ase.calculators.eam.EAM")
-    register_calculator("ase.calculators.elk.ELK")
-    register_calculator("ase.calculators.emt.EMT")
-    register_calculator("ase.calculators.espresso.Espresso")
-    register_calculator("ase.calculators.ff.ForceField")
-    register_calculator("ase.calculators.gamess_us.GAMESSUS")
-    register_calculator("ase.calculators.gaussian.GaussianDynamics")
-    register_calculator("ase.calculators.gromacs.Gromacs")
-    register_calculator("ase.calculators.lammpslib.LAMMPSlib")
-    register_calculator("ase.calculators.lammpsrun.LAMMPS")
-    register_calculator("ase.calculators.lj.LennardJones")
-    register_calculator("ase.calculators.mopac.MOPAC")
-    register_calculator("ase.calculators.morse.MorsePotential")
-    register_calculator("ase.calculators.nwchem.NWChem")
-    register_calculator("ase.calculators.octopus.Octopus")
-    register_calculator("ase.calculators.onetep.Onetep")
-    register_calculator("ase.calculators.orca.ORCA")
-    register_calculator("ase.calculators.plumed.Plumed")
-    register_calculator("ase.calculators.psi4.Psi4")
-    register_calculator("ase.calculators.qchem.QChem")
-    register_calculator("ase.calculators.qmmm.SimpleQMMM")
-    register_calculator("ase.calculators.qmmm.EIQMMM")
-    register_calculator("ase.calculators.qmmm.RescaledCalculator")
-    register_calculator("ase.calculators.qmmm.ForceConstantCalculator")
-    register_calculator("ase.calculators.qmmm.ForceQMMM")
-    register_calculator("ase.calculators.tip3p.TIP3P")
-    register_calculator("ase.calculators.tip4p.TIP4P")
-
-
-def define_to_register(register_function: Callable):
-
-    plugin = get_currently_registered_plugin()
-
-    def register(*args, **kwargs):
-        out = register_function(*args, **kwargs)
-        out.plugin = plugin
-        out.register()
-
-    return register
-
-
-def register_formats():
     # We define all the IO formats below.  Each IO format has a code,
     # such as '1F', which defines some of the format's properties:
     #
@@ -96,7 +15,6 @@ def register_formats():
     # S=needs a file-name str
     # B=like F, but opens in binary mode
 
-    F = define_to_register(define_io_format)
     F('abinit-gsr', 'ABINIT GSR file', '1S',
       module='abinit', glob='*o_GSR.nc')
     F('abinit-in', 'ABINIT input file', '1F',
@@ -264,45 +182,3 @@ def register_formats():
     # xyz: No `ext='xyz'` in the definition below.
     #      The .xyz files are handled by the extxyz module by default.
     F('xyz', 'XYZ-file', '+F')
-
-
-def register_viewers():
-    F = define_to_register(define_viewer)
-
-    F("ase", "View atoms using ase gui.")
-    F("ngl", "View atoms using nglview.")
-    F("mlab", "View atoms using matplotlib.")
-    F("sage", "View atoms using sage.")
-    F("x3d", "View atoms using x3d.")
-
-    # CLI viweers that are internally supported
-    F(
-        "avogadro", "View atoms using avogradro.", cli=True, fmt="cube",
-        argv=["avogadro"]
-    )
-    F(
-        "ase_gui_cli", "View atoms using ase gui.", cli=True, fmt="traj",
-        argv=[sys.executable, '-m', 'ase.gui'],
-    )
-    F(
-        "gopenmol",
-        "View atoms using gopenmol.",
-        cli=True,
-        fmt="extxyz",
-        argv=["runGOpenMol"],
-    )
-    F(
-        "rasmol",
-        "View atoms using rasmol.",
-        cli=True,
-        fmt="proteindatabank",
-        argv=["rasmol", "-pdb"],
-    )
-    F("vmd", "View atoms using vmd.", cli=True, fmt="cube", argv=["vmd"])
-    F(
-        "xmakemol",
-        "View atoms using xmakemol.",
-        cli=True,
-        fmt="extxyz",
-        argv=["xmakemol", "-f"],
-    )

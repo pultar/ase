@@ -1,3 +1,9 @@
+""" Listings are containers used for plugins. In addition to
+standard dict, they allow to better finding of their items
+(e.g. by a given attribute) and creating "filtered views"
+(see the ``filter``  method).
+"""
+
 from collections.abc import Mapping
 from ase.utils import lazyproperty
 from typing import Dict, Optional, Callable
