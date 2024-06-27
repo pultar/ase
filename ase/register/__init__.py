@@ -1,5 +1,5 @@
 from ase.register.plugins import get_currently_registered_plugin
-from typing import Union, Optional, List, Sequence
+from typing import Union, Optional, List, Tuple
 import numpy as np
 from ase.io.formats import define_io_format
 from ase.visualize.viewers import define_viewer
@@ -41,7 +41,7 @@ def register_calculator(cls: str, name=None):
 def register_io_format(module, desc, code, *, name=None, ext=None,
                        glob=None, magic=None, encoding=None,
                        magic_regex=None, allowed_pbc: Optional[List[
-                           Union[str, bytes, np.ndarray, Sequence]
+                           Union[str, bytes, np.ndarray, List, Tuple]
                        ]] = None):
     """ Just a wrapper for :func:`ioformats.define_io_format`.
     The order of parameters is however slightly different here,
