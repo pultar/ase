@@ -8,6 +8,7 @@ from ase.io.formats import define_io_format
 from ase.visualize.viewers import define_viewer
 from ase.register.plugins import get_currently_registered_plugin
 import sys
+from typing import Callable
 
 """
 note: ase.register.register_io_format is just a wrapper
@@ -73,7 +74,7 @@ def register_calculators():
     register_calculator("ase.calculators.tip4p.TIP4P")
 
 
-def define_to_register(register_function):
+def define_to_register(register_function: Callable):
 
     plugin = get_currently_registered_plugin()
 
