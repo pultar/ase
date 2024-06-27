@@ -38,7 +38,7 @@ def ase_register_ex():
                           f"ase.plugins.{name}."
                           " This ASE plugin is probably broken.")
 
-    epoints = entry_points(group='ase.plugins')
+    epoints = entry_points()['ase.plugins']
     for epoint in epoints:
         module = import_plugin_module(epoint.name, epoint.value)
         if module:
