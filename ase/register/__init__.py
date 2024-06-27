@@ -61,7 +61,7 @@ def register_io_format(module, desc, code, *, name=None, ext=None,
 
 
 def register_viewer(name, desc, *, module=None, cli=False, fmt=None, argv=None):
-    global define_io_format
+    global define_viewer
     if not define_viewer:
         from ase.visualize.viewers import define_viewer
     view = define_viewer(name, desc, module=module, cli=cli,
