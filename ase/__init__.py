@@ -14,6 +14,3 @@ __all__ = ['Atoms', 'Atom']
 __version__ = '3.23.1b1'
 
 ase.parallel  # silence pyflakes
-
-# To avoid circular import
-from . import plugins  # NOQA: E402, F401
