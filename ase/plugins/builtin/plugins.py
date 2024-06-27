@@ -24,11 +24,7 @@ from .. import plugins
 
 import importlib
 import warnings
-
-try:
-    from importlib.metadata import entry_points
-except ImportError:
-    from importlib_metadata import entry_points
+from importlib.metadata import entry_points
 
 
 def ase_register_ex():
