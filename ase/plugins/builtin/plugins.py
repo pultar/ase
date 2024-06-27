@@ -25,6 +25,7 @@ from .. import plugins
 import importlib
 import warnings
 from importlib.metadata import entry_points
+import sys
 
 
 def ase_register_ex():
@@ -38,10 +39,13 @@ def ase_register_ex():
                           f"ase.plugins.{name}."
                           " This ASE plugin is probably broken.")
 
-    epoints = entry_points()
-    if 'ase.plugins' not in epoints:
-          return
-    epoints = epoints['ase.plugins']
+    if sys.version_info < (3, 10):
+        epoints = entry_points()
+        if 'ase.plugins' not in epoints:
+              return
+        epoints = epoints['ase.plugins']
+    else:
+        epoints = entry_points(group = 'ase.plugins')
     for epoint in epoints:
         module = import_plugin_module(epoint.name, epoint.value)
         if module:
