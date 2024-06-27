@@ -133,7 +133,8 @@ def register_formats():
     F('db', 'ASE SQLite database file', '+S')
     F('dftb', 'DftbPlus input file', '1S', magic=b'Geometry')
     F('dlp4', 'DL_POLY_4 CONFIG file', '1F',
-      module='dlp4', ext='config', glob=['*CONFIG*'])
+      module='dlp4', ext='config', glob=['*CONFIG*'],
+      allowed_pbc=["000", "110", "111"])
     F('dlp-history', 'DL_POLY HISTORY file', '+F',
       module='dlp4', glob='HISTORY')
     F('dmol-arc', 'DMol3 arc file', '+S',

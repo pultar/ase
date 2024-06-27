@@ -100,14 +100,14 @@ def test_ioformat(format, atoms, catch_warnings):
 
     kwargs = {}
 
-    if format == 'dlp4':
-        atoms.pbc = (1, 1, 0)
+    io = ioformats[format]
+    if not io.are_such_pbc_allowed(atoms.pbc):
+        atoms.pbc = io.allowed_pbc[0]
     elif format == 'espresso-in':
         kwargs = {'pseudopotentials': {'H': 'plum', 'Au': 'lemon'}}
 
     images = [atoms, atoms]
 
-    io = ioformats[format]
     print('{:20}{}{}{}{}'.format(format,
                                  ' R'[io.can_read],
                                  ' W'[io.can_write],

@@ -1,4 +1,6 @@
 from ase.register.plugins import get_currently_registered_plugin
+from typing import Union, Optional, List, Sequence
+import numpy as np
 
 # import them later to avoid a circular import
 define_io_format = None
@@ -38,7 +40,9 @@ def register_calculator(cls: str, name=None):
 
 def register_io_format(module, desc, code, *, name=None, ext=None,
                        glob=None, magic=None, encoding=None,
-                       magic_regex=None):
+                       magic_regex=None, allowed_pbc: Optional[List[
+                           Union[str, bytes, np.ndarray, Sequence]
+                       ]] = None):
     """ Just a wrapper for :func:`ioformats.define_io_format`.
     The order of parameters is however slightly different here,
     to be as much as possible similiar to the :func:`register_calculator`
@@ -55,6 +59,7 @@ def register_io_format(module, desc, code, *, name=None, ext=None,
                            magic=magic,
                            encoding=encoding,
                            magic_regex=magic_regex,
+                           allowed_pbc=allowed_pbc,
                            external=True)
     fmt.plugin = get_currently_registered_plugin()
     return fmt

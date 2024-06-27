@@ -32,6 +32,7 @@ from ase.register.listing import ListingView
 from ase.atoms import Atoms
 from ase.parallel import parallel_function, parallel_generator
 from ase.utils import string2index
+import numpy as np
 
 PEEK_BYTES = 50000
 
@@ -40,18 +41,50 @@ class UnknownFileTypeError(Exception):
     pass
 
 
+def normalize_pbc(pbc: Union[str, bytes, np.ndarray, List, Tuple]) \
+        -> np.ndarray:
+    """
+    >>> normalize_pbc("101")
+    array([ True, False,  True])
+    >>> normalize_pbc(b"110")
+    array([ True, True,  False])
+    >>> normalize_pbc("110")
+    array([ True, True,  False])
+    >>> normalize_pbc([0,0,1])
+    array([ False, False,  True])
+    """
+    if isinstance(pbc, (np.ndarray, List, tuple)):
+        pbc = np.asarray(pbc, dtype=bool)
+    else:
+        if isinstance(pbc, str):
+            pbc = str.encode("ascii")
+        if max(pbc) > 1:
+            pbc = np.fromiter((i - ord('0') for i in pbc),
+                              dtype=bool, count=3)
+        else:
+            pbc = np.fromiter((i for i in pbc), dtype=bool, count=3)
+    assert len(pbc) == 3
+    return pbc
+
+
 class IOFormat(BasePluggable):
 
     class_type = 'io_formats'
 
     def __init__(self, name: str, desc: str, code: str, module_name: str,
-                 encoding: str = None) -> None:
+                 encoding: str = None,
+                 allowed_pbc: Optional[
+                     List[Union[str, bytes, np.ndarray, List, Tuple]]
+                 ] = None) -> None:
         self.name = name
         self.description = desc
         assert len(code) == 2
         assert code[0] in list('+1')
         assert code[1] in list('BFS')
         self.code = code
+        if allowed_pbc:
+            allowed_pbc = [normalize_pbc(i) for i in allowed_pbc]
+        self.allowed_pbc = allowed_pbc
         self.module_name = module_name
         self.encoding = encoding
 
@@ -199,6 +232,14 @@ class IOFormat(BasePluggable):
                'is supported.')
         warnings.warn(msg.format(action=action), FutureWarning)
 
+    def are_such_pbc_allowed(self, pbc: np.ndarray) -> bool:
+        if self.allowed_pbc is None:
+            return True
+        for i in self.allowed_pbc:
+            if np.array_equal(i, pbc):
+                return True
+        return False
+
     @property
     def write(self):
         if not self.can_write:
@@ -207,11 +248,27 @@ class IOFormat(BasePluggable):
 
         return self._write_wrapper
 
-    def _write_wrapper(self, *args, **kwargs):
+    def _write_wrapper(self, filename: Union[str, PurePath, IO],
+                       images: Union[Atoms, Sequence[Atoms]],
+                       *args, **kwargs):
         function = self._writefunc()
         if function is None:
             raise ValueError(f'Cannot write to {self.name}-format')
-        return function(*args, **kwargs)
+
+        if self.allowed_pbc is not None:
+
+            def check_pbc(atoms):
+                if not self.are_such_pbc_allowed(atoms.pbc):
+                    raise ValueError(f'Cannot write Atoms with PBC {atoms.pbc}'
+                                     f'into {self.name}-format.')
+
+            if hasattr(images, "pbc"):
+                check_pbc(images)
+            else:
+                for i in images:
+                    check_pbc(i)
+
+        return function(filename, images, *args, **kwargs)
 
     @property
     def modes(self) -> str:
@@ -306,7 +363,10 @@ format2modulename = {}  # Left for compatibility only.
 
 def define_io_format(name, desc, code, *, module=None, ext=None,
                      glob=None, magic=None, encoding=None,
-                     magic_regex=None, external=False):
+                     magic_regex=None, external=False,
+                     allowed_pbc: Optional[
+                         List[Union[str, bytes, np.ndarray, List, Tuple]]
+                     ] = None):
     if module is None:
         module = name.replace('-', '_')
         format2modulename[name] = module
@@ -324,7 +384,7 @@ def define_io_format(name, desc, code, *, module=None, ext=None,
         return strings
 
     fmt = IOFormat(name, desc, code, module_name=module,
-                   encoding=encoding)
+                   encoding=encoding, allowed_pbc=allowed_pbc)
     fmt.extensions = normalize_patterns(ext)
     fmt.globs = normalize_patterns(glob)
     fmt.magic = normalize_patterns(magic)
