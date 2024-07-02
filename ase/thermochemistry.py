@@ -56,8 +56,8 @@ class ThermoChem:
 
         return ret
 
-    def _vibrational_entropy_contribution(self, temperature) -> float:
-        """Overwrite the standard Harmonic one to scale frequencies.
+    def _msRRHO_vib_entropy_contribution(self, temperature) -> float:
+        """msRRHO Vibrational Entropy Contribution.
 
         Equation numbers from :doi:`10.1039/D1SC00621E`
 
@@ -76,7 +76,7 @@ class ThermoChem:
         S_v *= (units.J / units._Nav)
         return S_v
 
-    def _rotational_entropy_contribution(
+    def _qRRHO_rot_entropy_contribution(
             self, temperature) -> Tuple[float, float]:
         """Calculates the rotation of a rigid rotor for low frequency modes.
 
@@ -108,8 +108,8 @@ class ThermoChem:
         S_r_damp *= units.J / units._Nav
         return S_r_damp, B_av
     
-    def _damped_vibrational_energy_contribution(self, temperature):
-        
+    def _damped_vib_energy_contribution(self, temperature):
+        assert False, "Not implemented yet"
         H_v_damp = 0.
         R = units._k * units._Nav
 
@@ -122,7 +122,7 @@ class ThermoChem:
         return H_v_damp
     
     def _damped_free_rotor_energy_contribution(self, temperature):
-
+        assert False, "Not implemented yet"
         H_r_damp = 0.
         R = units._k * units._Nav
         for n, freq in enumerate(self.frequencies):
@@ -130,6 +130,9 @@ class ThermoChem:
             H_r_damp += 1 - self._head_gordon_damp(freq) * comp
         
         return H_r_damp
+
+    def _raise(self, raise_to) -> List[float]:
+        return [raise_to if x < raise_to else x for x in self.vib_energies]
 
 
 class HarmonicThermo(ThermoChem):
@@ -294,9 +297,6 @@ class quasiHarmonicThermo(HarmonicThermo):
         self.vib_energies = self._raise(raise_to)
         self.potentialenergy = potentialenergy
 
-    def _raise(self, raise_to) -> List[float]:
-        return [raise_to if x < raise_to else x for x in self.vib_energies]
-
 
 class HarmonicThermo_msRRHO(HarmonicThermo):
     """Subclass of :class:`HarmonicThermo`, including Grimme's scaling method
@@ -364,9 +364,7 @@ class HarmonicThermo_msRRHO(HarmonicThermo):
         float : The entropy in eV/K.
         """
         # overwrite verbosity to avoid double printing
-        S = super().get_entropy(temperature, verbose=False)
-        # re-enable verbosity
-        self.verbose = verbose
+        S = self._msRRHO_vib_entropy_contribution(temperature)
         write = self._vprint
         fmt = '%-15s%13.7f eV/K%13.3f eV'
         write('Entropy components at T = %.2f K:' % temperature)
@@ -374,7 +372,7 @@ class HarmonicThermo_msRRHO(HarmonicThermo):
         write('%15s%13s     %13s' % ('', 'S', 'T*S'))
         write(fmt % ('S_vib', S, S * temperature))
 
-        S_r_damp, B_av = self._rotational_entropy_contribution(temperature)
+        S_r_damp, B_av = self._qRRHO_rot_entropy_contribution(temperature)
         S += S_r_damp
         write(fmt % ('S_rot', S_r_damp, S_r_damp * temperature))
 
@@ -427,7 +425,7 @@ class HarmonicThermo_msRRHO(HarmonicThermo):
         write(fmt % ('E_rot', H_RT))
         H_corr += H_rot
 
-        H_v_damp = self._damped_vibrational_energy_contribution(temperature)
+        H_v_damp = self._damped_vib_energy_contribution(temperature)
         write(fmt % ('E_vib_damp', H_v_damp))
         H_corr += H_v_damp
 
