@@ -48,6 +48,89 @@ class ThermoChem:
         if self.verbose:
             sys.stdout.write(text + os.linesep)
 
+    def _head_gordon_damp(self, freq) -> float:
+        """Head-Gordon damping function.
+
+        Equation 8 from :doi:`10.1002/chem.201200497`"""
+        ret = 1 / (1 + (self.tau_freq / freq)**self.alpha)
+
+        return ret
+
+    def _vibrational_entropy_contribution(self, temperature) -> float:
+        """Overwrite the standard Harmonic one to scale frequencies.
+
+        Equation numbers from :doi:`10.1039/D1SC00621E`
+
+        Returns the entropy contribution in eV/K."""
+        R = units._k * units._Nav
+        kT = units._k * temperature  # J/K*K
+        S_v = 0.
+        for n, freq in enumerate(self.frequencies):
+            # eq 4
+            # J/molK #js *1/s #/J/K  ### J/mol
+            x = units._hplanck * freq / kT
+            # vibrational components grimme
+            comp = R * ((x) * np.exp(-x) / (1 - np.exp(-x))
+                        - np.log(1. - np.exp(-x)))
+            S_v += self._head_gordon_damp(freq) * comp
+        S_v *= (units.J / units._Nav)
+        return S_v
+
+    def _rotational_entropy_contribution(
+            self, temperature) -> Tuple[float, float]:
+        """Calculates the rotation of a rigid rotor for low frequency modes.
+
+        Equation numbering from :doi:`10.1002/chem.201200497`
+
+        Returns the entropy contribution in eV/K."""
+        # rotational entropy
+        S_r_damp = 0.
+        kT = units._k * temperature
+        R = units._k * units._Nav
+        inertias = (self.atoms.get_moments_of_inertia() * units._amu /
+                    ((1e10)**2))  # from amu/A^2 to kg m^2
+        B_av = np.mean(inertias)
+
+        # eq 4
+        mu = units._hplanck / (8 * np.pi**2 * self.frequencies)
+        # eq 5
+        mu_prime = (mu * B_av) / (mu + B_av)  # kg m^2
+        # eq 6
+        x = np.sqrt(8 * np.pi**3 * mu_prime * kT / (units._hplanck)**2)
+        # filter zeros out and set them to zero
+        log_x = np.log(x, out=np.zeros_like(x, dtype='float64'), where=(x != 0))
+        S_r_components = R * (1 / 2 + log_x)  # J/(Js)^2
+
+        # eq 7
+        for n, freq in enumerate(self.frequencies):
+            S_r_damp += (1 - self._head_gordon_damp(freq)) * (S_r_components[n])
+
+        S_r_damp *= units.J / units._Nav
+        return S_r_damp, B_av
+    
+    def _damped_vibrational_energy_contribution(self, temperature):
+        
+        H_v_damp = 0.
+        R = units._k * units._Nav
+
+        for n, freq in enumerate(self.frequencies):
+            x = units._hplanck * freq / units._k
+            comp = R * x * ( 0.5 + 1 / ( np.exp(x / temperature) - 1 ) )
+
+            H_v_damp += self._head_gordon_damp(freq) * comp
+
+        return H_v_damp
+    
+    def _damped_free_rotor_energy_contribution(self, temperature):
+
+        H_r_damp = 0.
+        R = units._k * units._Nav
+        for n, freq in enumerate(self.frequencies):
+            comp = 0.5 * R * temperature
+            H_r_damp += 1 - self._head_gordon_damp(freq) * comp
+        
+        return H_r_damp
+
 
 class HarmonicThermo(ThermoChem):
     """Class for calculating thermodynamic properties in the approximation
@@ -266,65 +349,7 @@ class HarmonicThermo_msRRHO(HarmonicThermo):
         # 1/s (vib energies to per meter frequencies)
         self.frequencies = units._c * 1e2 * converted
 
-    def _head_gordon_damp(self, freq) -> float:
-        """Head-Gordon damping function.
 
-        Equation 8 from :doi:`10.1002/chem.201200497`"""
-        ret = 1 / (1 + (self.tau_freq / freq)**self.alpha)
-
-        return ret
-
-    def _vibrational_entropy_contribution(self, temperature) -> float:
-        """Overwrite the standard Harmonic one to scale frequencies.
-
-        Equation numbers from :doi:`10.1039/D1SC00621E`
-
-        Returns the entropy contribution in eV/K."""
-        R = units._k * units._Nav
-        kT = units._k * temperature  # J/K*K
-        S_v = 0.
-        for n, freq in enumerate(self.frequencies):
-            # eq 4
-            # J/molK #js *1/s #/J/K  ### J/mol
-            x = units._hplanck * freq / kT
-            # vibrational components grimme
-            comp = R * ((x) * np.exp(-x) / (1 - np.exp(-x))
-                        - np.log(1. - np.exp(-x)))
-            S_v += self._head_gordon_damp(freq) * comp
-        S_v *= (units.J / units._Nav)
-        return S_v
-
-    def _rotational_entropy_contribution(
-            self, temperature) -> Tuple[float, float]:
-        """Calculates the rotation of a rigid rotor for low frequency modes.
-
-        Equation numbering from :doi:`10.1002/chem.201200497`
-
-        Returns the entropy contribution in eV/K."""
-        # rotational entropy
-        S_r_damp = 0.
-        kT = units._k * temperature
-        R = units._k * units._Nav
-        inertias = (self.atoms.get_moments_of_inertia() * units._amu /
-                    ((1e10)**2))  # from amu/A^2 to kg m^2
-        B_av = np.mean(inertias)
-
-        # eq 4
-        mu = units._hplanck / (8 * np.pi**2 * self.frequencies)
-        # eq 5
-        mu_prime = (mu * B_av) / (mu + B_av)  # kg m^2
-        # eq 6
-        x = np.sqrt(8 * np.pi**3 * mu_prime * kT / (units._hplanck)**2)
-        # filter zeros out and set them to zero
-        log_x = np.log(x, out=np.zeros_like(x, dtype='float64'), where=(x != 0))
-        S_r_components = R * (1 / 2 + log_x)  # J/(Js)^2
-
-        # eq 7
-        for n, freq in enumerate(self.frequencies):
-            S_r_damp += (1 - self._head_gordon_damp(freq)) * (S_r_components[n])
-
-        S_r_damp *= units.J / units._Nav
-        return S_r_damp, B_av
 
     def get_entropy(self, temperature, verbose=True) -> float:
         """Calculate the msRRHO entropy (eV/K) at a specified temperature (K)
@@ -358,28 +383,7 @@ class HarmonicThermo_msRRHO(HarmonicThermo):
         write('=' * 49)
         return S
     
-    def _damped_vibrational_energy_contribution(self, temperature):
-        
-        H_v_damp = 0.
-        R = units._k * units._Nav
 
-        for n, freq in enumerate(self.frequencies):
-            x = units._hplanck * freq / units._k
-            comp = R * x * ( 0.5 + 1 / ( np.exp(x / temperature) - 1 ) )
-
-            H_v_damp += self._head_gordon_damp(freq) * comp
-
-        return H_v_damp
-    
-    def _damped_free_rotor_energy_contribution(self, temperature):
-
-        H_r_damp = 0.
-        R = units._k * units._Nav
-        for n, freq in enumerate(self.frequencies):
-            comp = 0.5 * R * temperature
-            H_r_damp += 1 - self._head_gordon_damp(freq) * comp
-        
-        return H_r_damp
 
     def get_msRRHO_energy(self, temperature, verbose=True) -> float:
         """Calculate the msRRHO energy (eV) at a specified temperature (K)
