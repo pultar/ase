@@ -85,22 +85,9 @@ class Pluggables(Listing):
 
     item_type: type = Pluggable
 
-    def __init__(self, plugin_list, class_type: str):
+    def __init__(self, class_type: str):
         super().__init__()
-        self.plugins = plugin_list
         self.class_type = class_type
-
-    def __getstate__(self):
-        """ Just avoid de/serializing the plugin, save its name instead """
-        out = self.__dict__.copy()
-        del out['plugins']
-        return out
-
-    def __setstate__(self, state):
-        """ Just avoid de/serializing the plugin, save its name instead """
-        from ase import plugins as ase_plugins  # NOQA E402
-        self.__dict__.update(state)
-        self.plugins = ase_plugins
 
     @lazyproperty
     def singular_name(self):

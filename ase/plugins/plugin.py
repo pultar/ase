@@ -91,7 +91,7 @@ class Plugins(Listing):
 
     def __init__(self, pluggable_types):
         self._pluggables = {
-            k: cls(self, k)
+            k: cls(k)
             for k, cls in pluggable_types.items()
         }
         self._items = {}
