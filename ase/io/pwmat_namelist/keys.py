@@ -1,8 +1,8 @@
 pwmat_keys=[
-    "Parallel",
+    "Parallel", # List,[4,1]
     'PRECISION',
     'JOB',
-    'IN.PSP(i)',
+    'IN.PSP', # List,IN.PSP(i)
     'IN.ATOM',
     'CONVERGENCE',
     'ACCURACY',
@@ -37,7 +37,7 @@ pwmat_keys=[
     'RELAX_HSE',
     'VDW',
     'LONDON_S6',
-    'LONDON_C6(i)',
+    'LONDON_C6', # List, LONDON_C6(i)
     'LONDON_RCUT',
     'DFTD3_S6',
     'DFTD3_RS6',
@@ -93,9 +93,9 @@ pwmat_keys=[
     'FLAG_CYLINDER',
     'IN.A_FIELD',
     'RCUT',
-    'IN.PSP_RCUT(i)',
+    'IN.PSP_RCUT', # List, IN.PSP_RCUT(i)
     'MD_VV_SCALE',
-    'LDAU_PSP(i)',
+    'LDAU_PSP', # List, LDAU_PSP(i)
     'NUM_BLOCKED_PSI',
     'WF_STORE2DISK',
     'NUM_DOS_GRID',
