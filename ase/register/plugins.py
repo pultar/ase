@@ -97,7 +97,6 @@ class Plugins(Listing):
     def packages(self):
         """ Return all the plugin packages, that are in the
         given namespace package (so that are in 'ase.plugins') """
-        modules = []
         package = importlib.import_module(self.namespace_package)
 
         def mod_name(mod):
@@ -117,7 +116,7 @@ class Plugins(Listing):
         modules = (i for i in modules if i)
         return modules
 
-    def populate(self):
+    def _populate(self):
         self._items = {p.__name__.rsplit('.', 1)[-1]: Plugin(self, p)
                        for p in self.packages()}
 
@@ -152,7 +151,7 @@ class Plugins(Listing):
         - import all plugin packages
         - register all the pluggables from the plugins
         """
-        self.populate()
+        self._populate()
         for i in self.values():
             i.register()
 
