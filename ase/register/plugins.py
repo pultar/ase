@@ -90,7 +90,7 @@ class Plugins(Listing):
     def __init__(self, namespace_package, pluggable_types):
         self.namespace_package = namespace_package
         self._pluggables = {
-            k: cls(self, k)
+            k: cls(k)
             for k, cls in pluggable_types.items()
         }
 
