@@ -1,8 +1,8 @@
-pwmat_keys=[
-    "Parallel", # List,[4,1]
+pwmat_keys = [
+    "Parallel",  # List,[4,1]
     'PRECISION',
     'JOB',
-    'IN.PSP', # List,IN.PSP(i)
+    'IN.PSP',  # List,IN.PSP(i)
     'IN.ATOM',
     'CONVERGENCE',
     'ACCURACY',
@@ -37,7 +37,7 @@ pwmat_keys=[
     'RELAX_HSE',
     'VDW',
     'LONDON_S6',
-    'LONDON_C6', # List, LONDON_C6(i)
+    'LONDON_C6',  # List, LONDON_C6(i)
     'LONDON_RCUT',
     'DFTD3_S6',
     'DFTD3_RS6',
@@ -59,7 +59,7 @@ pwmat_keys=[
     'OUT.VATOM',
     'OUT.FORCE',
     'OUT.STRESS',
-    'IN.KPT', 
+    'IN.KPT',
     'IN.SYMM',
     'SYMM_PREC',
     'MP_N123',
@@ -82,7 +82,7 @@ pwmat_keys=[
     'MIN_SCF_ITER',
     'SYS_TYPE',
     'PULAY_MIX_OPT',
-    'PULAY_METRIC_Q0', 
+    'PULAY_METRIC_Q0',
     'IN.OCC',
     'IN.CC',
     'IN.OCC_ADIA',
@@ -93,9 +93,9 @@ pwmat_keys=[
     'FLAG_CYLINDER',
     'IN.A_FIELD',
     'RCUT',
-    'IN.PSP_RCUT', # List, IN.PSP_RCUT(i)
+    'IN.PSP_RCUT',  # List, IN.PSP_RCUT(i)
     'MD_VV_SCALE',
-    'LDAU_PSP', # List, LDAU_PSP(i)
+    'LDAU_PSP',  # List, LDAU_PSP(i)
     'NUM_BLOCKED_PSI',
     'WF_STORE2DISK',
     'NUM_DOS_GRID',
