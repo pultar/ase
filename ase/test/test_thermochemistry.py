@@ -8,7 +8,7 @@ from ase.optimize import QuasiNewton
 from ase.phonons import Phonons
 from ase.thermochemistry import (CrystalThermo, HarmonicThermo, HinderedThermo,
                                  IdealGasThermo, quasiHarmonicThermo,
-                                 HarmonicThermo_msRRHO)
+                                 msRRHOThermo)
 from ase.vibrations import Vibrations
 
 
@@ -349,7 +349,7 @@ def msRRHO_thermo(
     potentialenergy=0.0,
     **kwargs
 ):
-    return HarmonicThermo_msRRHO(
+    return msRRHOThermo(
         atoms=atoms,
         tau=tau,
         vib_energies=vib_energies if vib_energies else VIB_ENERGIES_HARMONIC,
@@ -367,14 +367,6 @@ def test_msRRHO():
     helmholtz = thermo.get_helmholtz_energy(temperature=298.15)
     assert helmholtz == pytest.approx(HELMHOLTZ_msRRHO)
 
-
-def test_msRRHO_imag_warn():
-    "Test warning of overwriting imag_modes_handling"
-    with pytest.warns(UserWarning):
-        thermo = msRRHO_thermo(atoms=Atoms('H'), tau=35,
-                               imag_modes_handling='error')
-    helmholtz = thermo.get_helmholtz_energy(temperature=298.15)
-    assert helmholtz == pytest.approx(HELMHOLTZ_msRRHO)
 
 
 def test_msRRHO_converge_to_harmonic():

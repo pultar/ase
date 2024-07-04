@@ -4,7 +4,7 @@ outputs."""
 import os
 import sys
 from warnings import warn
-from typing import List, Tuple
+from typing import Dict, List, Tuple
 
 import numpy as np
 
@@ -19,11 +19,73 @@ class ThermoChem:
         """Returns the zero-point vibrational energy correction in eV."""
         return 0.5 * np.sum(self.vib_energies)
 
-    def _vibrational_energy_contribution(self, temperature):
+
+    def get_ideal_trans_heat_capacity_temp(self, temperature) -> float:
+        """Returns the translational heat capacity times T in eV.
+        
+        Parameters
+        ----------
+        temperature : float
+            The temperature in Kelvin.
+
+        Returns
+        -------
+        float
+        """
+        return 3. / 2. * units.kB * temperature  # translational heat capacity (3-d gas)
+
+    def get_ideal_rot_heat_capacity_temp(self, geometry, temperature) -> float:
+        """Returns the rotational heat capacity times T in eV.
+        
+        Parameters
+        ----------
+        geometry : str
+            The geometry of the molecule. Options are 'nonlinear', 'linear', and 'monatomic'.
+        temperature : float
+            The temperature in Kelvin.
+        
+        Returns
+        -------
+        float
+        """
+        if geometry == 'nonlinear':  # rotational heat capacity
+            Cv_r = 3. / 2. * units.kB
+        elif geometry == 'linear':
+            Cv_r = units.kB
+        elif geometry == 'monatomic':
+            Cv_r = 0.
+        else:
+            raise ValueError('Invalid geometry: %s' % geometry)
+        return Cv_r * temperature
+    
+    def get_ideal_trans_entropy(self, atoms, temperature) -> float:
+        """Returns the translational entropy in eV/K.
+        
+        Parameters
+        ----------
+        atoms : ase.Atoms
+            The atoms object.
+        temperature : float
+            The temperature in Kelvin.
+        
+        Returns
+        -------
+        float
+        """
+        # Translational entropy (term inside the log is in SI units).
+        mass = sum(self.atoms.get_masses()) * units._amu  # kg/molecule
+        S_t = (2 * np.pi * mass * units._k *
+               temperature / units._hplanck**2)**(3.0 / 2)
+        S_t *= units._k * temperature / self.referencepressure
+        S_t = units.kB * (np.log(S_t) + 5.0 / 2.0)
+        return S_t
+
+
+    def get_vib_energy_contribution(self, temperature) -> float:
         """Calculates the change in internal energy due to vibrations from
         0K to the specified temperature for a set of vibrations given in
-        eV and a temperature given in Kelvin. Returns the energy change
-        in eV."""
+        eV and a temperature given in Kelvin.
+        Returns the energy change in eV."""
         kT = units.kB * temperature
         dU = 0.
 
@@ -31,17 +93,20 @@ class ThermoChem:
             dU += energy / (np.exp(energy / kT) - 1.)
         return dU
 
-    def _vibrational_entropy_contribution(self, temperature):
+    def get_vib_entropy_contribution(self, temperature, return_list=False):
         """Calculates the entropy due to vibrations for a set of vibrations
         given in eV and a temperature given in Kelvin.  Returns the entropy
         in eV/K."""
         kT = units.kB * temperature
         S_v = 0.
-        for energy in self.vib_energies:
-            x = energy / kT  # eV/ eV/K*K
-            S_v += x / (np.exp(x) - 1.) - np.log(1. - np.exp(-x))
+        energies = np.array(self.vib_energies)
+        energies /= kT # eV/ eV/K*K
+        S_v = energies / (np.exp(energies) - 1.) - np.log(1. - np.exp(-energies))
         S_v *= units.kB
-        return S_v
+        if return_list:
+            return S_v
+        else:
+            return np.sum(S_v)
 
     def _vprint(self, text):
         """Print output if verbose flag True."""
@@ -56,28 +121,27 @@ class ThermoChem:
 
         return ret
 
-    def _msRRHO_vib_entropy_contribution(self, temperature) -> float:
-        """msRRHO Vibrational Entropy Contribution.
+    def get_qRRHO_entropy_contribution(self, temperature) -> float:
+        """qRRHO Vibrational Entropy Contribution from
+        :doi:`10.1002/chem.201200497`.
 
-        Equation numbers from :doi:`10.1039/D1SC00621E`
+        Uses tau_freq to switch between S_v and S_r.
 
-        Returns the entropy contribution in eV/K."""
-        R = units._k * units._Nav
-        kT = units._k * temperature  # J/K*K
-        S_v = 0.
+        Returns the entropy in eV/K."""
+        qRRHO_vib = self.get_vib_entropy_contribution(temperature, return_list=True)
+        qRRHO_rot = self.calc_qRRHO_entropies_r(temperature)
+        assert len(qRRHO_vib) == len(qRRHO_rot), "qRRHO_vib and qRRHO_rot do not match"
+        assert len(qRRHO_vib) == len(self.frequencies), "qRRHO and frequencies do not match"
+        S = 0.
+        #simply use a cutoff to switch between S_v and S_r
         for n, freq in enumerate(self.frequencies):
-            # eq 4
-            # J/molK #js *1/s #/J/K  ### J/mol
-            x = units._hplanck * freq / kT
-            # vibrational components grimme
-            comp = R * ((x) * np.exp(-x) / (1 - np.exp(-x))
-                        - np.log(1. - np.exp(-x)))
-            S_v += self._head_gordon_damp(freq) * comp
-        S_v *= (units.J / units._Nav)
-        return S_v
+            if freq < self.tau_freq:
+                S += qRRHO_rot[n]
+            else:
+                S += qRRHO_vib[n]
+        return S
 
-    def _qRRHO_rot_entropy_contribution(
-            self, temperature) -> Tuple[float, float]:
+    def calc_qRRHO_entropies_r(self, temperature) -> np.array:
         """Calculates the rotation of a rigid rotor for low frequency modes.
 
         Equation numbering from :doi:`10.1002/chem.201200497`
@@ -88,7 +152,7 @@ class ThermoChem:
         kT = units._k * temperature
         R = units._k * units._Nav
         inertias = (self.atoms.get_moments_of_inertia() * units._amu /
-                    ((1e10)**2))  # from amu/A^2 to kg m^2
+                    (1e10**2))  # from amu/A^2 to kg m^2
         B_av = np.mean(inertias)
 
         # eq 4
@@ -100,15 +164,38 @@ class ThermoChem:
         # filter zeros out and set them to zero
         log_x = np.log(x, out=np.zeros_like(x, dtype='float64'), where=(x != 0))
         S_r_components = R * (1 / 2 + log_x)  # J/(Js)^2
+        S_r_components *= units.J / units._Nav
+        return S_r_components
 
+
+    def get_msRRHO_vib_entropy_v_contribution(self, temperature) -> float:
+        """msRRHO Vibrational Entropy Contribution from
+        :doi:`10.1039/D1SC00621E`.
+
+        Returns the entropy contribution in eV/K."""
+        
+        qRRHO = self.get_vib_entropy_contribution(temperature, return_list=True)
+        assert len(qRRHO) == len(self.frequencies), "qRRHO and frequencies do not match"
+        S_v = 0.
+        for n, freq in enumerate(self.frequencies):
+            S_v += self._head_gordon_damp(freq) * qRRHO[n]
+        return S_v
+    
+    def get_msRRHO_vib_entropy_r_contribution(self, temperature) -> float:
+        """Calculates the rotation of a rigid rotor for low frequency modes.
+
+        Equation numbering from :doi:`10.1002/chem.201200497`
+
+        Returns the entropy contribution in eV/K."""
+        S_r_components = self.calc_qRRHO_entropies_r(temperature)
+        assert len(S_r_components) == len(self.frequencies), "qRRHO and frequencies do not match"
+        S_r = 0.
         # eq 7
         for n, freq in enumerate(self.frequencies):
-            S_r_damp += (1 - self._head_gordon_damp(freq)) * (S_r_components[n])
-
-        S_r_damp *= units.J / units._Nav
-        return S_r_damp, B_av
+            S_r += (1 - self._head_gordon_damp(freq)) * (S_r_components[n])
+        return S_r
     
-    def _damped_vib_energy_contribution(self, temperature):
+    def get_damped_vib_energy_contribution(self, temperature):
         assert False, "Not implemented yet"
         H_v_damp = 0.
         R = units._k * units._Nav
@@ -116,20 +203,71 @@ class ThermoChem:
         for n, freq in enumerate(self.frequencies):
             x = units._hplanck * freq / units._k
             comp = R * x * ( 0.5 + 1 / ( np.exp(x / temperature) - 1 ) )
-
             H_v_damp += self._head_gordon_damp(freq) * comp
-
         return H_v_damp
     
-    def _damped_free_rotor_energy_contribution(self, temperature):
+    def get_damped_free_rotor_energy_contribution(self, temperature):
         assert False, "Not implemented yet"
         H_r_damp = 0.
         R = units._k * units._Nav
         for n, freq in enumerate(self.frequencies):
             comp = 0.5 * R * temperature
             H_r_damp += 1 - self._head_gordon_damp(freq) * comp
-        
         return H_r_damp
+    
+    def get_ideal_entropy(self, temperature, translation=False,
+                    vibration=False, rotation=False, geometry=None,
+                    electronic=False, pressure=None) ->Tuple[float, Dict[str, float]]:
+        """Returns the entropy, in eV/K and a dict of the contributions"""
+        S = 0.0
+        ret = {}
+
+        if translation:
+            S_t = self.get_ideal_trans_entropy(self.atoms, temperature)
+            ret['S_t'] = S_t
+            S += S_t
+            if pressure:
+                # Pressure correction to translational entropy.
+                S_p = - units.kB * np.log(pressure / self.referencepressure)
+                S += S_p
+                ret['S_p'] = S_p
+
+        if rotation:
+            # Rotational entropy (term inside the log is in SI units).
+            if geometry == 'monatomic':
+                S_r = 0.0
+            elif geometry == 'nonlinear':
+                inertias = (self.atoms.get_moments_of_inertia() * units._amu /
+                            1e10**2)  # kg m^2
+                S_r = np.sqrt(np.pi * np.prod(inertias)) / self.sigma
+                S_r *= (8.0 * np.pi**2 * units._k * temperature /
+                        units._hplanck**2)**(3.0 / 2.0)
+                S_r = units.kB * (np.log(S_r) + 3.0 / 2.0)
+            elif geometry == 'linear':
+                inertias = (self.atoms.get_moments_of_inertia() * units._amu /
+                            (10.0**10)**2)  # kg m^2
+                inertia = max(inertias)  # should be two identical and one zero
+                S_r = (8 * np.pi**2 * inertia * units._k * temperature /
+                    self.sigma / units._hplanck**2)
+                S_r = units.kB * (np.log(S_r) + 1.)
+            S += S_r
+            ret['S_r'] = S_r
+        
+
+        # Electronic entropy.
+        if electronic:
+            S_e = units.kB * np.log(2 * self.spin + 1)
+            S += S_e
+            ret['S_e'] = S_e
+
+        # Vibrational entropy
+        if vibration:
+            S_v = self.get_vib_entropy_contribution(temperature)
+            S += S_v
+            ret['S_v'] = S_v
+
+        return S, ret
+
 
     def _raise(self, raise_to) -> List[float]:
         return [raise_to if x < raise_to else x for x in self.vib_energies]
@@ -193,7 +331,7 @@ class HarmonicThermo(ThermoChem):
         write(fmt % ('E_ZPE', zpe))
         U += zpe
 
-        dU_v = self._vibrational_energy_contribution(temperature)
+        dU_v = self.get_vib_energy_contribution(temperature)
         write(fmt % ('Cv_harm (0->T)', dU_v))
         U += dU_v
 
@@ -215,7 +353,7 @@ class HarmonicThermo(ThermoChem):
 
         S = 0.
 
-        S_v = self._vibrational_entropy_contribution(temperature)
+        S_v = self.get_vib_entropy_contribution(temperature)
         write(fmt % ('S_harm', S_v, S_v * temperature))
         S += S_v
 
@@ -248,10 +386,9 @@ class HarmonicThermo(ThermoChem):
         return F
 
 
-class quasiHarmonicThermo(HarmonicThermo):
-    """Subclass of :class:`HarmonicThermo`, including the quasi-harmonic
+class quasiHarmonicThermo(ThermoChem):
+    """Subclass of :class:`ThermoChem`, including the quasi-harmonic
     approximation of Cramer, Truhlar and coworkers :doi:`10.1021/jp205508z`.
-    approximation of Cramer, Truhlar and coworkers. :doi:`10.1021/jp205508z`.
 
     Inputs:
 
@@ -298,8 +435,86 @@ class quasiHarmonicThermo(HarmonicThermo):
         self.potentialenergy = potentialenergy
 
 
-class HarmonicThermo_msRRHO(HarmonicThermo):
-    """Subclass of :class:`HarmonicThermo`, including Grimme's scaling method
+    def get_internal_energy(self, temperature, verbose=True):
+        """Returns the internal energy, in eV, in the harmonic approximation
+        at a specified temperature (K)."""
+        #copy paste of HarmonicThermo.get_internal_energy at the moment
+        self.verbose = verbose
+        write = self._vprint
+        fmt = '%-15s%13.3f eV'
+        write('Internal energy components at T = %.2f K:' % temperature)
+        write('=' * 31)
+
+        U = 0.
+
+        write(fmt % ('E_pot', self.potentialenergy))
+        U += self.potentialenergy
+
+        zpe = self.get_ZPE_correction()
+        write(fmt % ('E_ZPE', zpe))
+        U += zpe
+
+        dU_v = self.get_vib_energy_contribution(temperature)
+        write(fmt % ('Cv_harm (0->T)', dU_v))
+        U += dU_v
+
+        write('-' * 31)
+        write(fmt % ('U', U))
+        write('=' * 31)
+        return U
+
+
+    def get_entropy(self, temperature, verbose=True):
+        self.verbose = verbose
+        write = self._vprint
+        fmt = '%-15s%13.7f eV/K%13.3f eV'
+        write('Entropy components at T = %.2f K:' % temperature)
+        write('=' * 49)
+        write('%15s%13s     %13s' % ('', 'S', 'T*S'))
+        S, S_dict = super().get_ideal_entropy(temperature=temperature, vibration=True)
+
+        write(fmt % ('S_harm', S_dict['S_v'], S_dict['S_v'] * temperature))
+        write('-' * 49)
+        write(fmt % ('S', S, S * temperature))
+        write('=' * 49)
+        return S
+
+    
+    def get_helmholtz_energy(self, temperature, verbose=True)   ->float:
+        """Calculate the Helmholtz free energy (eV) at a specified temperature (K)
+
+        Inputs:
+        temperature : float
+            The temperature in Kelvin.
+        verbose : bool
+            If True, print the energy components.
+
+        Returns:
+        float : The Helmholtz free energy
+        """
+        #copy paste of HarmonicThermo.get_helmholtz_energy at the moment
+        self.verbose = True
+        write = self._vprint
+
+        U = self.get_internal_energy(temperature, verbose=verbose)
+        write('')
+        S = self.get_entropy(temperature, verbose=verbose)
+        F = U - temperature * S
+
+        write('')
+        write('Free energy components at T = %.2f K:' % temperature)
+        write('=' * 23)
+        fmt = '%5s%15.3f eV'
+        write(fmt % ('U', U))
+        write(fmt % ('-T*S', -temperature * S))
+        write('-' * 23)
+        write(fmt % ('F', F))
+        write('=' * 23)
+        return F
+
+
+class msRRHOThermo(quasiHarmonicThermo):
+    """Subclass of :class:`quasiHarmonicThermo`, including Grimme's scaling method
     based on :doi:`10.1002/chem.201200497` and :doi:`10.1039/D1SC00621E`.
 
     Inputs:
@@ -320,27 +535,26 @@ class HarmonicThermo_msRRHO(HarmonicThermo):
         Note that for `\\nu_{scal}=1.0` this method is equivalent to
         the quasi-RRHO method in :doi:`10.1002/chem.201200497`.
 
-    Do not set the :class:`HarmonicThermo` ``imag_modes_handling`` for
-    treating imaginary modes, we enforce here treating imaginary
-    modes as Grimme suggests (converting them to real by multiplying them
-    with :math:`-i`).
+    We enforce treating imaginary modes as Grimme suggests (converting 
+    them to real by multiplying them with :math:`-i`).
     """
 
-    def __init__(self, atoms, tau=35, nu_scal=1.0, **kwargs) -> None:
-        if 'imag_modes_handling' in kwargs:
-            warn(
-                "imag_modes_handling is overwritten by Grimme's method.",
-                UserWarning)
-        kwargs['imag_modes_handling'] = 'invert'
+    def __init__(self, vib_energies, atoms, potentialenergy=0.,
+                 tau=35, nu_scal=1.0) -> None:
+        
+        # Check for imaginary frequencies.
+        self.imag_modes_handling = 'invert'
+        vib_energies, n_imag = _clean_vib_energies(
+            vib_energies, handling=self.imag_modes_handling
+        )
         # scale the frequencies (i.e. energies) before passing them on
         self.nu_scal = nu_scal
-        kwargs['vib_energies'] = np.multiply(
-            kwargs['vib_energies'], self.nu_scal)
+        self.vib_energies = np.multiply(vib_energies, self.nu_scal)
         # perhaps later we can pass the scaling to the class above
-        super().__init__(**kwargs)
+        self.n_imag = n_imag
         self.atoms = atoms
         self.tau = tau
-        self.alpha = 4  # from paper
+        self.alpha = 4  # from paper 10.1002/chem.201200497
         # 1/s (tau to meters)
         self.tau_freq = units._c * self.tau * 1e2
         # J*s *m/s /e ## eV*m
@@ -348,7 +562,7 @@ class HarmonicThermo_msRRHO(HarmonicThermo):
         converted = np.array(self.vib_energies) / e_phot
         # 1/s (vib energies to per meter frequencies)
         self.frequencies = units._c * 1e2 * converted
-
+        self.potentialenergy = potentialenergy
 
 
     def get_entropy(self, temperature, verbose=True) -> float:
@@ -364,7 +578,7 @@ class HarmonicThermo_msRRHO(HarmonicThermo):
         float : The entropy in eV/K.
         """
         # overwrite verbosity to avoid double printing
-        S = self._msRRHO_vib_entropy_contribution(temperature)
+        S = self.get_msRRHO_vib_entropy_v_contribution(temperature)
         write = self._vprint
         fmt = '%-15s%13.7f eV/K%13.3f eV'
         write('Entropy components at T = %.2f K:' % temperature)
@@ -372,7 +586,7 @@ class HarmonicThermo_msRRHO(HarmonicThermo):
         write('%15s%13s     %13s' % ('', 'S', 'T*S'))
         write(fmt % ('S_vib', S, S * temperature))
 
-        S_r_damp, B_av = self._qRRHO_rot_entropy_contribution(temperature)
+        S_r_damp = self.get_msRRHO_vib_entropy_r_contribution(temperature)
         S += S_r_damp
         write(fmt % ('S_rot', S_r_damp, S_r_damp * temperature))
 
@@ -413,7 +627,7 @@ class HarmonicThermo_msRRHO(HarmonicThermo):
         write(fmt % ('E_ZPE', zpe))
 
         #Only for printing 
-        H_vib = self._vibrational_energy_contribution(temperature)
+        H_vib = self.get_vib_energy_contribution(temperature)
         write(fmt % ('Cv_harm (0->T)', H_vib))
            
 
@@ -425,11 +639,11 @@ class HarmonicThermo_msRRHO(HarmonicThermo):
         write(fmt % ('E_rot', H_RT))
         H_corr += H_rot
 
-        H_v_damp = self._damped_vib_energy_contribution(temperature)
+        H_v_damp = self.get_damped_vib_energy_contribution(temperature)
         write(fmt % ('E_vib_damp', H_v_damp))
         H_corr += H_v_damp
 
-        H_r_damp = self._damped_free_rotor_energy_contribution(temperature)
+        H_r_damp = self.get_damped_free_rotor_energy_contribution(temperature)
         write(fmt % ('E_rot_damp', H_r_damp))
         H_corr += H_r_damp
       
@@ -592,7 +806,7 @@ class HinderedThermo(ThermoChem):
         U += dU_r
 
         # Vibrational Energy
-        dU_v = self._vibrational_energy_contribution(temperature)
+        dU_v = self.get_vib_energy_contribution(temperature)
         write(fmt % ('E_vib', dU_v))
         U += dU_v
 
@@ -658,7 +872,7 @@ class HinderedThermo(ThermoChem):
         S += S_r
 
         # Vibrational Entropy
-        S_v = self._vibrational_entropy_contribution(temperature)
+        S_v = self.get_vib_entropy_contribution(temperature)
         write(fmt % ('S_vib', S_v, S_v * temperature))
         S += S_v
 
@@ -804,20 +1018,15 @@ class IdealGasThermo(ThermoChem):
         write(fmt % ('E_ZPE', zpe))
         H += zpe
 
-        Cv_t = 3. / 2. * units.kB  # translational heat capacity (3-d gas)
-        write(fmt % ('Cv_trans (0->T)', Cv_t * temperature))
-        H += Cv_t * temperature
+        Cv_tT = self.get_ideal_trans_heat_capacity_temp(temperature)
+        write(fmt % ('Cv_trans (0->T)', Cv_tT))
+        H += Cv_tT
 
-        if self.geometry == 'nonlinear':  # rotational heat capacity
-            Cv_r = 3. / 2. * units.kB
-        elif self.geometry == 'linear':
-            Cv_r = units.kB
-        elif self.geometry == 'monatomic':
-            Cv_r = 0.
-        write(fmt % ('Cv_rot (0->T)', Cv_r * temperature))
-        H += Cv_r * temperature
+        Cv_rT = self.get_ideal_rot_heat_capacity_temp(self.geometry, temperature)
+        write(fmt % ('Cv_rot (0->T)', Cv_rT ))
+        H += Cv_rT
 
-        dH_v = self._vibrational_energy_contribution(temperature)
+        dH_v = self.get_vib_energy_contribution(temperature)
         write(fmt % ('Cv_vib (0->T)', dH_v))
         H += dH_v
 
@@ -846,52 +1055,17 @@ class IdealGasThermo(ThermoChem):
         write('=' * 49)
         write('%15s%13s     %13s' % ('', 'S', 'T*S'))
 
-        S = 0.0
+        S, S_dict = super().get_ideal_entropy(temperature,
+                                translation=True, vibration=True,
+                                rotation=True, geometry=self.geometry,
+                                electronic=True,
+                                pressure=pressure)
 
-        # Translational entropy (term inside the log is in SI units).
-        mass = sum(self.atoms.get_masses()) * units._amu  # kg/molecule
-        S_t = (2 * np.pi * mass * units._k *
-               temperature / units._hplanck**2)**(3.0 / 2)
-        S_t *= units._k * temperature / self.referencepressure
-        S_t = units.kB * (np.log(S_t) + 5.0 / 2.0)
-        write(fmt % ('S_trans (1 bar)', S_t, S_t * temperature))
-        S += S_t
-
-        # Rotational entropy (term inside the log is in SI units).
-        if self.geometry == 'monatomic':
-            S_r = 0.0
-        elif self.geometry == 'nonlinear':
-            inertias = (self.atoms.get_moments_of_inertia() * units._amu /
-                        (10.0**10)**2)  # kg m^2
-            S_r = np.sqrt(np.pi * np.prod(inertias)) / self.sigma
-            S_r *= (8.0 * np.pi**2 * units._k * temperature /
-                    units._hplanck**2)**(3.0 / 2.0)
-            S_r = units.kB * (np.log(S_r) + 3.0 / 2.0)
-        elif self.geometry == 'linear':
-            inertias = (self.atoms.get_moments_of_inertia() * units._amu /
-                        (10.0**10)**2)  # kg m^2
-            inertia = max(inertias)  # should be two identical and one zero
-            S_r = (8 * np.pi**2 * inertia * units._k * temperature /
-                   self.sigma / units._hplanck**2)
-            S_r = units.kB * (np.log(S_r) + 1.)
-        write(fmt % ('S_rot', S_r, S_r * temperature))
-        S += S_r
-
-        # Electronic entropy.
-        S_e = units.kB * np.log(2 * self.spin + 1)
-        write(fmt % ('S_elec', S_e, S_e * temperature))
-        S += S_e
-
-        # Vibrational entropy.
-        S_v = self._vibrational_entropy_contribution(temperature)
-        write(fmt % ('S_vib', S_v, S_v * temperature))
-        S += S_v
-
-        # Pressure correction to translational entropy.
-        S_p = - units.kB * np.log(pressure / self.referencepressure)
-        write(fmt % ('S (1 bar -> P)', S_p, S_p * temperature))
-        S += S_p
-
+        write(fmt % ('S_trans (1 bar)', S_dict['S_t'], S_dict['S_t'] * temperature))
+        write(fmt % ('S_rot', S_dict['S_r'], S_dict['S_r'] * temperature))
+        write(fmt % ('S_elec', S_dict['S_e'], S_dict['S_e'] * temperature))
+        write(fmt % ('S_vib', S_dict['S_v'], S_dict['S_v'] * temperature))
+        write(fmt % ('S (1 bar -> P)', S_dict['S_p'], S_dict['S_p'] * temperature))
         write('-' * 49)
         write(fmt % ('S', S, S * temperature))
         write('=' * 49)
