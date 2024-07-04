@@ -15,6 +15,11 @@ class ThermoChem:
     """Base class containing common methods used in thermochemistry
     calculations."""
 
+    @property
+    def frequencies(self):
+        """Returns the vibrational frequencies in m^-1."""
+        return np.array(self.vib_energies) / units._hplanck  * units._e 
+    
     def get_ZPE_correction(self):
         """Returns the zero-point vibrational energy correction in eV."""
         return 0.5 * np.sum(self.vib_energies)
@@ -131,7 +136,7 @@ class ThermoChem:
         qRRHO_vib = self.get_vib_entropy_contribution(temperature, return_list=True)
         qRRHO_rot = self.calc_qRRHO_entropies_r(temperature)
         assert len(qRRHO_vib) == len(qRRHO_rot), "qRRHO_vib and qRRHO_rot do not match"
-        assert len(qRRHO_vib) == len(self.frequencies), "qRRHO and frequencies do not match"
+        assert len(qRRHO_vib) == len(self.vib_energies), "qRRHO and frequencies do not match"
         S = 0.
         #simply use a cutoff to switch between S_v and S_r
         for n, freq in enumerate(self.frequencies):
@@ -175,7 +180,7 @@ class ThermoChem:
         Returns the entropy contribution in eV/K."""
         
         qRRHO = self.get_vib_entropy_contribution(temperature, return_list=True)
-        assert len(qRRHO) == len(self.frequencies), "qRRHO and frequencies do not match"
+        assert len(qRRHO) == len(self.vib_energies), "qRRHO and frequencies do not match"
         S_v = 0.
         for n, freq in enumerate(self.frequencies):
             S_v += self._head_gordon_damp(freq) * qRRHO[n]
@@ -188,7 +193,7 @@ class ThermoChem:
 
         Returns the entropy contribution in eV/K."""
         S_r_components = self.calc_qRRHO_entropies_r(temperature)
-        assert len(S_r_components) == len(self.frequencies), "qRRHO and frequencies do not match"
+        assert len(S_r_components) == len(self.vib_energies), "qRRHO and frequencies do not match"
         S_r = 0.
         # eq 7
         for n, freq in enumerate(self.frequencies):
@@ -557,11 +562,6 @@ class msRRHOThermo(quasiHarmonicThermo):
         self.alpha = 4  # from paper 10.1002/chem.201200497
         # 1/s (tau to meters)
         self.tau_freq = units._c * self.tau * 1e2
-        # J*s *m/s /e ## eV*m
-        e_phot = units._hplanck * units._c / units._e * 100
-        converted = np.array(self.vib_energies) / e_phot
-        # 1/s (vib energies to per meter frequencies)
-        self.frequencies = units._c * 1e2 * converted
         self.potentialenergy = potentialenergy
 
 
