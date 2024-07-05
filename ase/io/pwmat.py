@@ -182,7 +182,9 @@ def read_pwmat_report(fd: io.TextIOWrapper, index=-1, MOVEMENT=None, QDIV=None):
                 if 'stress:' not in line:
                     stress = None
                 else:
-                    stress.append([float(l) for l in line.strip().split()[-3:]])
+                    if stress is not None:
+                        stress.append([float(l) for l in
+                                       line.strip().split()[-3:]])
             cells.append(cell)
             if stress is not None:
                 stress = full_3x3_to_voigt_6_stress(stress)
