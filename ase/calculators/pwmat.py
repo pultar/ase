@@ -11,7 +11,7 @@ from ase.io.pwmat_namelist.namelist import Namelist_pwmat
 
 
 class PWmatProfile(BaseProfile):
-    configvars = {}
+    configvars = {'pseudo_dir'}
 
     def __init__(self, pseudo_dir, **kwargs):
         nprocs = os.environ.get('SLURM_NPROCS')
@@ -76,6 +76,8 @@ class PWmatTemplate(CalculatorTemplate):
 does not exist.")
                 else:
                     input_data['IN.PSP'][i] = pp_path
+        else:
+            raise KeyError('The keyword IN.PSP must be given !')
         parameters['input_data'] = input_data
 
         write(

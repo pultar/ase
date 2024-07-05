@@ -1,6 +1,6 @@
 import warnings
 import io
-from typing import List
+from typing import List, Dict
 import numpy as np
 import os
 from ase.atoms import Atoms
@@ -155,7 +155,7 @@ def read_pwmat_report(fd: io.TextIOWrapper, index=-1, MOVEMENT=None, QDIV=None):
             energies.append(float(line.split()[2]))
 
     if MOVEMENT is not None and os.path.exists(MOVEMENT):
-        indexes = {
+        indexes: Dict[str, List[int]] = {
             _PWmat_Cell: [],
             _PWmat_Stress: [],
             _PWmat_Position: [],
@@ -210,11 +210,11 @@ def read_pwmat_report(fd: io.TextIOWrapper, index=-1, MOVEMENT=None, QDIV=None):
                 force.append([float(l) for l in line.split()[1:4]])
             forces.append(force)
     else:
-        cells = None
-        stresses = None
-        symbols = None
-        positions = None
-        forces = None
+        # cells_none = None
+        stresses_none = None
+        # symbols_none = None
+        # positions_none = None
+        forces_none = None
 
     if QDIV is not None and os.path.exists(QDIV):
         lines = open(QDIV).readlines()
@@ -242,13 +242,15 @@ def read_pwmat_report(fd: io.TextIOWrapper, index=-1, MOVEMENT=None, QDIV=None):
         try:
             calc = SinglePointDFTCalculator(atoms, energy=energies[-1],
                                             free_energy=energies[-1],
-                                            forces=forces, stress=stresses,
+                                            forces=forces_none,
+                                            stress=stresses_none,
                                             magmoms=magmoms, efermi=efermis[-1])
         except IndexError:
             warnings.warn('No energy value in REPORT file, \
 and a fake value is assigned to energy.')
             calc = SinglePointDFTCalculator(atoms, energy=0.0, free_energy=0.0,
-                                            forces=forces, stress=stresses,
+                                            forces=forces_none,
+                                            stress=stresses_none,
                                             magmoms=magmoms, efermi=None)
         atoms.calc = calc
         images.append(atoms)
@@ -309,7 +311,7 @@ def write_pwmat_in(fd: io.TextIOWrapper, atoms: Atoms, input_data=None,
                     mp_n123_tmp = [str(t) for t in mp_n123_tmp]
                     input_parameters['MP_N123'] = ' '.join(mp_n123_tmp)
             else:
-                raise KeyError('The keyword JOB must be defined !')
+                raise KeyError('The keyword JOB must be given !')
     else:
         if 'MP_N123' not in list(input_parameters):
             warnings.warn('The default value is used for the k-point.')
