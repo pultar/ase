@@ -1,6 +1,6 @@
 import warnings
 import io
-from typing import List, Dict
+from typing import List, Dict, Optional, Union
 import numpy as np
 import os
 from ase.atoms import Atoms
@@ -176,7 +176,7 @@ def read_pwmat_report(fd: io.TextIOWrapper, index=-1, MOVEMENT=None, QDIV=None):
             line_start = indexes[_PWmat_Cell][ii] + 1
             line_end = indexes[_PWmat_Position][ii] - 1
             cell = []
-            stress = []
+            stress: Optional[Union[List[List[float]], None]] = []
             for line in lines[line_start:line_end + 1]:
                 cell.append([float(l) for l in line.split()[:3]])
                 if 'stress:' not in line:

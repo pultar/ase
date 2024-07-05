@@ -51,7 +51,8 @@ class Namelist_pwmat(UserDict):
         else:
             assert len(self['PARALLEL']) == 2
             tmp_list = [int(n) for n in self['PARALLEL']]
-            assert tmp_list[0] * tmp_list[1] == int(nprocs)
+            if nprocs is not None:
+                assert tmp_list[0] * tmp_list[1] == int(nprocs)
 
         for arg_key in list(self):
             if arg_key in keys:
