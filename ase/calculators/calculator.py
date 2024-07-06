@@ -776,6 +776,10 @@ class Calculator(BaseCalculator):
     def read(self, label):
         """Read atoms, parameters and calculated properties from output file.
 
+        WARNING
+        -------
+        IMPLEMENTATION NOT MATCHING NAME AND DOCSTRING
+
         Read result from self.label file.  Raise ReadError if the file
         is not there.  If the file is corrupted or contains an error
         message from the calculation, a ReadError should also be
