@@ -86,16 +86,23 @@ class OpenMX(FileIOCalculator):
 
     def __init__(self, restart=None,
                  ignore_bad_restart_file=FileIOCalculator._deprecated,
-                 label='./openmx', atoms=None, command=None, mpi=None,
-                 pbs=None, **kwargs):
+                 label='ase', directory='./openmx',
+                 atoms=None, command=None, mpi=None, pbs=None,
+                 debug=None, **kwargs):
+
+        if debug is not None:
+            self.debug = debug
+        else:
+            self.debug = self.default_output_setting['debug']
 
         # Initialize and put the default parameters.
         self.initialize_pbs(pbs)
         self.initialize_mpi(mpi)
         self.initialize_output_setting(**kwargs)
 
-        FileIOCalculator.__init__(self, restart, ignore_bad_restart_file,
-                                  label, atoms, command, **kwargs)
+        super().__init__(restart, ignore_bad_restart_file,
+                         label, atoms, command, directory=directory,
+                         **kwargs)
 
     def __getitem__(self, key):
         """Convenience method to retrieve a parameter as
