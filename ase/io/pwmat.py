@@ -324,3 +324,35 @@ def write_pwmat_in(fd: io.TextIOWrapper, atoms: Atoms, input_data=None,
         mp_n123_tmp[-1] = '2'
         input_parameters['MP_N123'] = ' '.join(mp_n123_tmp)
     fd.write(input_parameters.to_string())
+
+
+def write_IN_KPT(dir_path: str, atoms: Atoms, density=None, **kwargs):
+    """_summary_
+
+    Args:
+        fd (str):
+            directory of IN.KPT file
+        atoms (Atoms):
+            Structure for PWmat calculation.
+        density (float):
+            k-points per 1/A on the output kpts list.
+             See :func: 'ase.dft.kpoints.bandpath' for details.
+    """
+    fd = open(dir_path, 'w+')
+    lat = atoms.cell.get_bravais_lattice()
+    # special_points = lat.get_special_points()
+    band_path = atoms.cell.bandpath(lat.special_path, density=density)
+    index2name = band_path._find_special_point_indices(eps=1e-5)
+    kpts = band_path.kpts
+    nkpts = len(kpts)
+
+    fd.write('{:>5}\n'.format(nkpts))
+    fd.write('{:>5}{:>5}\n'.format(2, 0))
+    for i in range(nkpts):
+        if i in list(index2name):
+            fd.write('{:>14.5f}{:>14.5f}{:>14.5f}{:>14.5f}{:>14}\n'.format
+                     (*kpts[i], 1.0, index2name[i]))
+        else:
+            fd.write('{:>14.5f}{:>14.5f}{:>14.5f}{:>14.5f}\n'.format
+                     (*kpts[i], 1.0))
+    fd.close()

@@ -8,6 +8,7 @@ from ase.calculators.genericfileio import (BaseProfile, CalculatorTemplate,
                                            GenericFileIOCalculator)
 from ase.io import read, write
 from ase.io.pwmat_namelist.namelist import Namelist_pwmat
+from ase.io.pwmat import write_IN_KPT
 
 
 class PWmatProfile(BaseProfile):
@@ -94,6 +95,11 @@ does not exist.")
         dst_config = directory / config_name
         write(dst_config, atoms, format='pwmat', **parameters)
 
+        IN_KPT = parameters['input_data'].get('IN.KPT', None)
+        if IN_KPT == 'T' or IN_KPT is True:
+            dst_kpt = directory / 'IN.KPT'
+            write_IN_KPT(dst_kpt, atoms, **parameters)
+
     def execute(self, directory, profile):
         profile.run(directory, self.inputname, self.outputname,
                     errorfile=self.errorname)
@@ -156,6 +162,11 @@ class PWmat(GenericFileIOCalculator):
             show_magnetic: bool
                 Whether to write MAGNETIC label in atom.config,
                 default to False.
+            density: float
+                 Number of k-points per 1/A on the output kpts list.
+                 default to None.
+                 Being used to generate the k-points list for IN.KPT file.
+
         - Examples:
         >>> from ase.calculators.pwmat import PWmat, PWmatProfile
         >>> from ase.build import bulk
