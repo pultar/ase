@@ -1,9 +1,10 @@
 import gzip
 import struct
-from collections import deque
 from os.path import splitext
 
 import numpy as np
+import re
+import io
 
 from ase.atoms import Atoms
 from ase.calculators.lammps import convert
@@ -216,6 +217,132 @@ def lammps_data_to_ase_atoms(
     return out_atoms
 
 
+def lammps_data_to_ase_atoms_from_typed_data(
+    data,
+    colnames,
+    cell,
+    celldisp,
+    pbc=False,
+    atomsobj=Atoms,
+    order=True,
+    specorder=None,
+    prismobj=None,
+    units="metal",
+):
+    """Extract positions and other per-atom parameters and create Atoms.
+
+    Unlike `lammps_data_to_ase_atoms`, this function assumes the data it is
+    given contains the type of each column. This avoids a large number of type
+    checks and conversions, but requires that the data is already in the
+    correct format.
+
+    :param data: per atom data (numpy structured array)
+    :param colnames: list of column names
+    :param cell: cell dimensions
+    :param celldisp: origin shift
+    :param pbc: periodic boundaries
+    :param atomsobj: function to create ase-Atoms object
+    :param order: sort atoms by id. Might be faster to turn off.
+    Disregarded in case `id` column is not given in file.
+    :param specorder: list of species to map lammps types to ase-species
+    (usually .dump files to not contain type to species mapping)
+    :param prismobj: Coordinate transformation between lammps and ase
+    :type prismobj: Prism
+    :param units: lammps units for unit transformation between lammps and ase
+    :returns: Atoms object
+    :rtype: Atoms
+    """
+
+    if data.ndim == 0:
+        data = data[np.newaxis]
+
+    # read IDs if given and order if needed
+    if "id" in colnames and order:
+        sort_order = np.argsort(data["id"])
+        data = data[sort_order]
+
+    # Determine the elements
+    if "element" in colnames:
+        elements = data["element"]
+    elif "type" in colnames:
+        elements = data["type"]
+        if specorder:
+            elements = [specorder[t - 1] for t in elements]
+    else:
+        raise ValueError("Cannot determine atom types from LAMMPS dump file")
+
+    # Create a dictionary to store the atom properties
+    atoms_dict = {
+        "symbols": elements
+    }
+
+    # Add positions or scaled positions
+    if "x" in colnames:
+        atoms_dict["positions"] = np.column_stack((data["x"],
+                                                   data["y"],
+                                                   data["z"]))
+    elif "xs" in colnames:
+        atoms_dict["scaled_positions"] = np.column_stack((data["xs"],
+                                                          data["ys"],
+                                                          data["zs"]))
+    elif "xu" in colnames:
+        atoms_dict["positions"] = np.column_stack((data["xu"],
+                                                   data["yu"],
+                                                   data["zu"]))
+    elif "xsu" in colnames:
+        atoms_dict["scaled_positions"] = np.column_stack((data["xsu"],
+                                                          data["ysu"],
+                                                          data["zsu"]))
+    else:
+        raise ValueError("No atomic positions found in LAMMPS output")
+
+    # Convert cell and celldisp
+    cell = convert(cell, "distance", units, "ASE")
+    celldisp = convert(celldisp, "distance", units, "ASE")
+
+    if prismobj:
+        celldisp = prismobj.vector_to_ase(celldisp)
+        cell = prismobj.update_cell(cell)
+        if "positions" in atoms_dict:
+            atoms_dict["positions"] = prismobj.vector_to_ase(
+                atoms_dict["positions"], wrap=True)
+        if "scaled_positions" in atoms_dict:
+            atoms_dict["scaled_positions"] = prismobj.vector_to_ase(
+                atoms_dict["scaled_positions"], wrap=True)
+
+    # Create the Atoms object
+    atoms = atomsobj(cell=cell, celldisp=celldisp, pbc=pbc, **atoms_dict)
+    # Add velocities if they exist
+    if all(col in colnames for col in ["vx", "vy", "vz"]):
+        velocities = np.column_stack((data["vx"], data["vy"], data["vz"]))
+        if prismobj:
+            velocities = prismobj.vector_to_ase(velocities)
+        atoms.set_velocities(velocities)
+
+    # Add charges if they exist
+    if "q" in colnames:
+        charges = data["q"]
+        atoms.set_initial_charges(charges)
+
+    # Add forces if they exist
+    if all(col in colnames for col in ["fx", "fy", "fz"]):
+        forces = np.column_stack((data["fx"], data["fy"], data["fz"]))
+        if prismobj:
+            forces = prismobj.vector_to_ase(forces)
+        # !TODO: use another calculator if available (or move forces
+        #        to atoms.property) (other problem: synchronizing
+        #        parallel runs)
+        calculator = SinglePointCalculator(atoms, energy=0.0, forces=forces)
+        atoms.calc = calculator
+
+    # Process the extra columns of fixes, variables, and computes
+    for colname in colnames:
+        if colname.startswith(("f_", "v_")) or\
+           (colname.startswith("c_") and not colname.startswith("c_q[")):
+            atoms.new_array(colname, data[colname])
+    return atoms
+
+
 def construct_cell(diagdisp, offdiag):
     """Help function to create an ASE-cell with displacement vector from
     the lammps coordination system parameters.
@@ -248,89 +375,166 @@ def get_max_index(index):
         return index.stop if (index.stop is not None) else float("inf")
 
 
-def read_lammps_dump_text(fileobj, index=-1, **kwargs):
-    """Process cleartext lammps dumpfiles
+def _process_timestep(args):
+    data_string, kwargs = args
+    string_stream = io.StringIO(data_string)
 
+    timestep_header = string_stream.readline().strip()
+    if not timestep_header.startswith('ITEM: TIMESTEP'):
+        raise ValueError("Expected 'ITEM: TIMESTEP' line is missing or invalid")
+
+    # The actual timestep
+    string_stream.readline()
+
+    # Read the number of atoms
+    natoms_header = string_stream.readline().strip()
+    if not natoms_header.startswith('ITEM: NUMBER OF ATOMS'):
+        raise ValueError(
+            "Expected 'ITEM: NUMBER OF ATOMS' line is missing or invalid")
+    string_stream.readline()
+
+    # Read the box bounds
+    bounds_header = string_stream.readline().strip()
+    if not bounds_header.startswith('ITEM: BOX BOUNDS'):
+        raise ValueError(
+            "Expected 'ITEM: BOX BOUNDS' line is missing or invalid")
+    if len(bounds_header.split()) > 3:
+        pbc = bounds_header.split(' ')[3:]
+        pbc = [bc == 'pp' for bc in pbc]
+    else:
+        # Just assume pbc
+        pbc = [True, True, True]
+
+    bounds_data = [list(
+        map(float, string_stream.readline().strip().split())) for _ in range(3)]
+
+    # Read the atom data header
+    atoms_header = string_stream.readline().strip()
+    if not atoms_header.startswith('ITEM: ATOMS'):
+        raise ValueError("Expected 'ITEM: ATOMS' line is missing or invalid")
+    colnames = atoms_header.split()[2:]
+
+    # Determine the data types for each column
+    dtype_list = []
+    for colname in colnames:
+        if colname in ['id', 'type']:
+            dtype_list.append((colname, int))
+        elif colname == 'element':
+            # 'U10' for strings with a max length of 10 characters
+            dtype_list.append((colname, 'U10'))
+        else:
+            dtype_list.append((colname, float))
+
+    # Read the data directly into the numpy array using numpy.loadtxt
+    data = np.loadtxt(string_stream, dtype=dtype_list)
+
+    # Construct the cell and celldisp
+    celldata = np.array(bounds_data)
+    diagdisp = celldata[:, :2].reshape(6, 1).flatten()
+    offdiag = celldata[:, 2] if celldata.shape[1] > 2 else (0.0,) * 3
+    cell, celldisp = construct_cell(diagdisp, offdiag)
+
+    # Convert data to Atoms object
+    atoms = lammps_data_to_ase_atoms_from_typed_data(
+        data, colnames, cell, celldisp, pbc, atomsobj=Atoms, **kwargs)
+
+    return atoms
+
+
+def _get_indices(index, num_timesteps):
+    """
+    Get the indices for the timesteps to be processed.
+
+    :param index: integer, slice object, or None
+    :param num_timesteps: number of timesteps in the trajectory
+
+    :returns: list of indices
+
+    How it works:
+    - If `index` is an integer, return a list containing that integer.
+    - If `index` is a slice object, return a list of indices generated by the
+      slice object.
+    - If `index` is None, return a list of all timesteps.
+    """
+    if isinstance(index, slice):
+        start, stop, step = index.indices(num_timesteps)
+        return np.arange(start, stop, step)
+    elif index is None:
+        return np.arange(num_timesteps)
+    elif index < 0:
+        return [num_timesteps - 1]
+    else:
+        return [index]
+
+
+def read_lammps_dump_text(fileobj, index=-1, **kwargs):
+    """Process cleartext LAMMPS dump files
     :param fileobj: filestream providing the trajectory data
     :param index: integer or slice object (default: get the last timestep)
-    :returns: list of Atoms objects
-    :rtype: list
+    :yields: Atoms objects
+    :rtype: generator
+
+    read_lammps_dump_text is called by _iread in formats.py. It's wrapped by a
+    @parrallel_generator decorator which allows for parallel reading of multiple
+    files. The generator yields Atoms objects for each requested timestep.
+
+    Files are opened before being read so we get either a io.StringIO or a
+    io.TextIOWrapper object to work with.
     """
-    # Load all dumped timesteps into memory simultaneously
-    lines = deque(fileobj.readlines())
-    index_end = get_max_index(index)
 
-    n_atoms = 0
-    images = []
+    # Define the (arbitrary) chunk size for reading the file.
+    chunksize = 1024 * 1024 * 100  # 10 MB
 
-    # avoid references before assignment in case of incorrect file structure
-    cell, celldisp, pbc = None, None, False
+    def find_timestep_positions():
+        """
+        Generator to find and yield positions of 'ITEM: TIMESTEP' in the file.
 
-    while len(lines) > n_atoms:
-        line = lines.popleft()
+        How it works:
 
-        if "ITEM: TIMESTEP" in line:
-            n_atoms = 0
-            line = lines.popleft()
-            # !TODO: pyflakes complains about this line -> do something
-            # ntimestep = int(line.split()[0])  # NOQA
+        1. Read the file in chunks of size `chunksize`.
+        2. Search for the pattern 'ITEM: TIMESTEP' in the chunk.
+        3. If the pattern is found, yield the position of the pattern.
+        4. Keep only the trailing part of the chunk that hasn't been searched.
+        5. Repeat steps 2-4 for the next chunk.
 
-        if "ITEM: NUMBER OF ATOMS" in line:
-            line = lines.popleft()
-            n_atoms = int(line.split()[0])
+        """
+        pattern = re.compile(r'ITEM: TIMESTEP\n')
+        pos = 0
+        while True:
+            chunk = fileobj.read(chunksize)
+            if not chunk:
+                break
+            for match in pattern.finditer(chunk):
+                yield pos + match.start()
+            pos += len(chunk)
+            # Keep only the trailing part that hasn't been searched
+            if match:
+                chunk = chunk[match.end():]
 
-        if "ITEM: BOX BOUNDS" in line:
-            # save labels behind "ITEM: BOX BOUNDS" in triclinic case
-            # (>=lammps-7Jul09)
-            tilt_items = line.split()[3:]
-            celldatarows = [lines.popleft() for _ in range(3)]
-            celldata = np.loadtxt(celldatarows)
-            diagdisp = celldata[:, :2].reshape(6, 1).flatten()
+    # Get all timestep positions
+    positions = list(find_timestep_positions())
+    num_timesteps = len(positions)
 
-            # determine cell tilt (triclinic case!)
-            if len(celldata[0]) > 2:
-                # for >=lammps-7Jul09 use labels behind "ITEM: BOX BOUNDS"
-                # to assign tilt (vector) elements ...
-                offdiag = celldata[:, 2]
-                # ... otherwise assume default order in 3rd column
-                # (if the latter was present)
-                if len(tilt_items) >= 3:
-                    sort_index = [tilt_items.index(i)
-                                  for i in ["xy", "xz", "yz"]]
-                    offdiag = offdiag[sort_index]
-            else:
-                offdiag = (0.0,) * 3
+    # Append end of file position for the last chunk
+    # seek(a,b) where a is the offset and b is the reference position
+    # (0: start of file, 1: current position, 2: end of file)
+    positions.append(fileobj.seek(0, 2))
 
-            cell, celldisp = construct_cell(diagdisp, offdiag)
+    # Get indices for the requested timesteps
+    indices = _get_indices(index, num_timesteps)
 
-            # Handle pbc conditions
-            if len(tilt_items) == 3:
-                pbc_items = tilt_items
-            elif len(tilt_items) > 3:
-                pbc_items = tilt_items[3:6]
-            else:
-                pbc_items = ["f", "f", "f"]
-            pbc = ["p" in d.lower() for d in pbc_items]
+    def read_timestep_chunks():
+        """
+        Generator to read and yield chunks of file corresponding to timesteps.
+        """
+        for start, end in zip(positions, positions[1:]):
+            fileobj.seek(start)
+            yield fileobj.read(end - start)
 
-        if "ITEM: ATOMS" in line:
-            colnames = line.split()[2:]
-            datarows = [lines.popleft() for _ in range(n_atoms)]
-            data = np.loadtxt(datarows, dtype=str)
-            out_atoms = lammps_data_to_ase_atoms(
-                data=data,
-                colnames=colnames,
-                cell=cell,
-                celldisp=celldisp,
-                atomsobj=Atoms,
-                pbc=pbc,
-                **kwargs
-            )
-            images.append(out_atoms)
-
-        if len(images) > index_end >= 0:
-            break
-
-    return images[index]
+    # Yield Atoms objects for each requested timestep
+    for i, chunk in enumerate(read_timestep_chunks()):
+        if i in indices:
+            yield _process_timestep((chunk, kwargs))
 
 
 def read_lammps_dump_binary(
