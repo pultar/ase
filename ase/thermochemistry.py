@@ -185,10 +185,7 @@ class ThermoChem(ABC):
         
         qRRHO = self.get_vib_entropy_contribution(temperature, return_list=True)
         assert len(qRRHO) == len(self.vib_energies), "qRRHO and frequencies do not match"
-        S_v = 0.
-        for n, freq in enumerate(self.frequencies):
-            S_v += self._head_gordon_damp(freq) * qRRHO[n]
-        return S_v
+        return (self._head_gordon_damp(self.frequencies) * qRRHO).sum()
     
     def get_msRRHO_vib_entropy_r_contribution(self, temperature) -> float:
         """Calculates the rotation of a rigid rotor for low frequency modes.
@@ -198,11 +195,8 @@ class ThermoChem(ABC):
         Returns the entropy contribution in eV/K."""
         S_r_components = self.calc_qRRHO_entropies_r(temperature)
         assert len(S_r_components) == len(self.vib_energies), "qRRHO and frequencies do not match"
-        S_r = 0.
         # eq 7
-        for n, freq in enumerate(self.frequencies):
-            S_r += (1 - self._head_gordon_damp(freq)) * (S_r_components[n])
-        return S_r
+        return ((1 - self._head_gordon_damp(self.frequencies)) * S_r_components).sum()
     
     def get_damped_vib_energy_contribution(self, temperature):
         assert False, "Not implemented yet"
