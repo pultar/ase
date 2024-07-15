@@ -24,8 +24,8 @@ class ThermoChem:
         """Returns the zero-point vibrational energy correction in eV."""
         return 0.5 * np.sum(self.vib_energies)
 
-
-    def get_ideal_trans_heat_capacity_temp(self, temperature) -> float:
+    @staticmethod
+    def get_ideal_translational_energy(temperature) -> float:
         """Returns the translational heat capacity times T in eV.
         
         Parameters
@@ -39,7 +39,8 @@ class ThermoChem:
         """
         return 3. / 2. * units.kB * temperature  # translational heat capacity (3-d gas)
 
-    def get_ideal_rot_heat_capacity_temp(self, geometry, temperature) -> float:
+    @staticmethod
+    def get_ideal_rotational_energy(geometry, temperature) -> float:
         """Returns the rotational heat capacity times T in eV.
         
         Parameters
@@ -1018,11 +1019,11 @@ class IdealGasThermo(ThermoChem):
         write(fmt % ('E_ZPE', zpe))
         H += zpe
 
-        Cv_tT = self.get_ideal_trans_heat_capacity_temp(temperature)
+        Cv_tT = self.get_ideal_translational_energy(temperature)
         write(fmt % ('Cv_trans (0->T)', Cv_tT))
         H += Cv_tT
 
-        Cv_rT = self.get_ideal_rot_heat_capacity_temp(self.geometry, temperature)
+        Cv_rT = self.get_ideal_rotational_energy(self.geometry, temperature)
         write(fmt % ('Cv_rot (0->T)', Cv_rT ))
         H += Cv_rT
 
