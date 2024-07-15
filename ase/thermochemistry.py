@@ -332,27 +332,27 @@ class HarmonicThermo(ThermoChem):
         at a specified temperature (K)."""
 
         self.verbose = verbose
-        write = self._vprint
+        vprint = self._vprint
         fmt = '%-15s%13.3f eV'
-        write('Internal energy components at T = %.2f K:' % temperature)
-        write('=' * 31)
+        vprint('Internal energy components at T = %.2f K:' % temperature)
+        vprint('=' * 31)
 
         U = 0.
 
-        write(fmt % ('E_pot', self.potentialenergy))
+        vprint(fmt % ('E_pot', self.potentialenergy))
         U += self.potentialenergy
 
         zpe = self.get_ZPE_correction()
-        write(fmt % ('E_ZPE', zpe))
+        vprint(fmt % ('E_ZPE', zpe))
         U += zpe
 
         dU_v = self.get_vib_energy_contribution(temperature)
-        write(fmt % ('Cv_harm (0->T)', dU_v))
+        vprint(fmt % ('Cv_harm (0->T)', dU_v))
         U += dU_v
 
-        write('-' * 31)
-        write(fmt % ('U', U))
-        write('=' * 31)
+        vprint('-' * 31)
+        vprint(fmt % ('U', U))
+        vprint('=' * 31)
         return U
 
     def get_entropy(self, temperature, verbose=True):
@@ -360,21 +360,21 @@ class HarmonicThermo(ThermoChem):
         at a specified temperature (K)."""
 
         self.verbose = verbose
-        write = self._vprint
+        vprint = self._vprint
         fmt = '%-15s%13.7f eV/K%13.3f eV'
-        write('Entropy components at T = %.2f K:' % temperature)
-        write('=' * 49)
-        write('%15s%13s     %13s' % ('', 'S', 'T*S'))
+        vprint('Entropy components at T = %.2f K:' % temperature)
+        vprint('=' * 49)
+        vprint('%15s%13s     %13s' % ('', 'S', 'T*S'))
 
         S = 0.
 
         S_v = self.get_vib_entropy_contribution(temperature)
-        write(fmt % ('S_harm', S_v, S_v * temperature))
+        vprint(fmt % ('S_harm', S_v, S_v * temperature))
         S += S_v
 
-        write('-' * 49)
-        write(fmt % ('S', S, S * temperature))
-        write('=' * 49)
+        vprint('-' * 49)
+        vprint(fmt % ('S', S, S * temperature))
+        vprint('=' * 49)
         return S
 
     def get_helmholtz_energy(self, temperature, verbose=True):
@@ -382,22 +382,22 @@ class HarmonicThermo(ThermoChem):
         approximation at a specified temperature (K)."""
 
         self.verbose = True
-        write = self._vprint
+        vprint = self._vprint
 
         U = self.get_internal_energy(temperature, verbose=verbose)
-        write('')
+        vprint('')
         S = self.get_entropy(temperature, verbose=verbose)
         F = U - temperature * S
 
-        write('')
-        write('Free energy components at T = %.2f K:' % temperature)
-        write('=' * 23)
+        vprint('')
+        vprint('Free energy components at T = %.2f K:' % temperature)
+        vprint('=' * 23)
         fmt = '%5s%15.3f eV'
-        write(fmt % ('U', U))
-        write(fmt % ('-T*S', -temperature * S))
-        write('-' * 23)
-        write(fmt % ('F', F))
-        write('=' * 23)
+        vprint(fmt % ('U', U))
+        vprint(fmt % ('-T*S', -temperature * S))
+        vprint('-' * 23)
+        vprint(fmt % ('F', F))
+        vprint('=' * 23)
         return F
 
 
@@ -453,43 +453,43 @@ class QuasiHarmonicThermo(ThermoChem):
         at a specified temperature (K)."""
         #copy paste of HarmonicThermo.get_internal_energy at the moment
         self.verbose = verbose
-        write = self._vprint
+        vprint = self._vprint
         fmt = '%-15s%13.3f eV'
-        write('Internal energy components at T = %.2f K:' % temperature)
-        write('=' * 31)
+        vprint('Internal energy components at T = %.2f K:' % temperature)
+        vprint('=' * 31)
 
         U = 0.
 
-        write(fmt % ('E_pot', self.potentialenergy))
+        vprint(fmt % ('E_pot', self.potentialenergy))
         U += self.potentialenergy
 
         zpe = self.get_ZPE_correction()
-        write(fmt % ('E_ZPE', zpe))
+        vprint(fmt % ('E_ZPE', zpe))
         U += zpe
 
         dU_v = self.get_vib_energy_contribution(temperature)
-        write(fmt % ('Cv_harm (0->T)', dU_v))
+        vprint(fmt % ('Cv_harm (0->T)', dU_v))
         U += dU_v
 
-        write('-' * 31)
-        write(fmt % ('U', U))
-        write('=' * 31)
+        vprint('-' * 31)
+        vprint(fmt % ('U', U))
+        vprint('=' * 31)
         return U
 
 
     def get_entropy(self, temperature, verbose=True):
         self.verbose = verbose
-        write = self._vprint
+        vprint = self._vprint
         fmt = '%-15s%13.7f eV/K%13.3f eV'
-        write('Entropy components at T = %.2f K:' % temperature)
-        write('=' * 49)
-        write('%15s%13s     %13s' % ('', 'S', 'T*S'))
+        vprint('Entropy components at T = %.2f K:' % temperature)
+        vprint('=' * 49)
+        vprint('%15s%13s     %13s' % ('', 'S', 'T*S'))
         S, S_dict = super().get_ideal_entropy(temperature=temperature, vibration=True)
 
-        write(fmt % ('S_harm', S_dict['S_v'], S_dict['S_v'] * temperature))
-        write('-' * 49)
-        write(fmt % ('S', S, S * temperature))
-        write('=' * 49)
+        vprint(fmt % ('S_harm', S_dict['S_v'], S_dict['S_v'] * temperature))
+        vprint('-' * 49)
+        vprint(fmt % ('S', S, S * temperature))
+        vprint('=' * 49)
         return S
 
     
@@ -507,22 +507,22 @@ class QuasiHarmonicThermo(ThermoChem):
         """
         #copy paste of HarmonicThermo.get_helmholtz_energy at the moment
         self.verbose = True
-        write = self._vprint
+        vprint = self._vprint
 
         U = self.get_internal_energy(temperature, verbose=verbose)
-        write('')
+        vprint('')
         S = self.get_entropy(temperature, verbose=verbose)
         F = U - temperature * S
 
-        write('')
-        write('Free energy components at T = %.2f K:' % temperature)
-        write('=' * 23)
+        vprint('')
+        vprint('Free energy components at T = %.2f K:' % temperature)
+        vprint('=' * 23)
         fmt = '%5s%15.3f eV'
-        write(fmt % ('U', U))
-        write(fmt % ('-T*S', -temperature * S))
-        write('-' * 23)
-        write(fmt % ('F', F))
-        write('=' * 23)
+        vprint(fmt % ('U', U))
+        vprint(fmt % ('-T*S', -temperature * S))
+        vprint('-' * 23)
+        vprint(fmt % ('F', F))
+        vprint('=' * 23)
         return F
 
 
@@ -586,20 +586,20 @@ class MSRRHOThermo(QuasiHarmonicThermo):
         """
         # overwrite verbosity to avoid double printing
         S = self.get_msRRHO_vib_entropy_v_contribution(temperature)
-        write = self._vprint
+        vprint = self._vprint
         fmt = '%-15s%13.7f eV/K%13.3f eV'
-        write('Entropy components at T = %.2f K:' % temperature)
-        write('=' * 49)
-        write('%15s%13s     %13s' % ('', 'S', 'T*S'))
-        write(fmt % ('S_vib', S, S * temperature))
+        vprint('Entropy components at T = %.2f K:' % temperature)
+        vprint('=' * 49)
+        vprint('%15s%13s     %13s' % ('', 'S', 'T*S'))
+        vprint(fmt % ('S_vib', S, S * temperature))
 
         S_r_damp = self.get_msRRHO_vib_entropy_r_contribution(temperature)
         S += S_r_damp
-        write(fmt % ('S_rot', S_r_damp, S_r_damp * temperature))
+        vprint(fmt % ('S_rot', S_r_damp, S_r_damp * temperature))
 
-        write('-' * 49)
-        write(fmt % ('S_tot', S, S * temperature))
-        write('=' * 49)
+        vprint('-' * 49)
+        vprint(fmt % ('S_tot', S, S * temperature))
+        vprint('=' * 49)
         return S
     
 
@@ -618,44 +618,44 @@ class MSRRHOThermo(QuasiHarmonicThermo):
         
         from scipy.special import iv
         self.verbose = verbose
-        write = self._vprint
+        vprint = self._vprint
         fmt = '%-15s%13.3f eV'
-        write('Internal energy components at T = %.2f K:' % temperature)
-        write('=' * 31)
+        vprint('Internal energy components at T = %.2f K:' % temperature)
+        vprint('=' * 31)
 
         U = 0
-        write(fmt % ('E_pot', self.potentialenergy))
+        vprint(fmt % ('E_pot', self.potentialenergy))
         U = self.potentialenergy
 
         H_corr = 0
 
         #Only for printing
         zpe = self.get_ZPE_correction()
-        write(fmt % ('E_ZPE', zpe))
+        vprint(fmt % ('E_ZPE', zpe))
 
         #Only for printing 
         H_vib = self.get_vib_energy_contribution(temperature)
-        write(fmt % ('Cv_harm (0->T)', H_vib))
+        vprint(fmt % ('Cv_harm (0->T)', H_vib))
            
 
         H_trans = 2.5 * units._k * units._Nav * temperature 
-        write(fmt % ('E_trans', H_RT))
+        vprint(fmt % ('E_trans', H_RT))
         H_corr += H_trans
 
         H_rot = 1.5 * units._k * units._Nav * temperature 
-        write(fmt % ('E_rot', H_RT))
+        vprint(fmt % ('E_rot', H_RT))
         H_corr += H_rot
 
         H_v_damp = self.get_damped_vib_energy_contribution(temperature)
-        write(fmt % ('E_vib_damp', H_v_damp))
+        vprint(fmt % ('E_vib_damp', H_v_damp))
         H_corr += H_v_damp
 
         H_r_damp = self.get_damped_free_rotor_energy_contribution(temperature)
-        write(fmt % ('E_rot_damp', H_r_damp))
+        vprint(fmt % ('E_rot_damp', H_r_damp))
         H_corr += H_r_damp
       
         H_RT = units._k * units._Nav * temperature 
-        write(fmt % ('Thermal energy', H_RT))
+        vprint(fmt % ('Thermal energy', H_RT))
         H_corr += H_RT
         
         return H_corr
@@ -779,14 +779,14 @@ class HinderedThermo(ThermoChem):
         from scipy.special import iv
 
         self.verbose = verbose
-        write = self._vprint
+        vprint = self._vprint
         fmt = '%-15s%13.3f eV'
-        write('Internal energy components at T = %.2f K:' % temperature)
-        write('=' * 31)
+        vprint('Internal energy components at T = %.2f K:' % temperature)
+        vprint('=' * 31)
 
         U = 0.
 
-        write(fmt % ('E_pot', self.potentialenergy))
+        vprint(fmt % ('E_pot', self.potentialenergy))
         U += self.potentialenergy
 
         # Translational Energy
@@ -797,7 +797,7 @@ class HinderedThermo(ThermoChem):
                     iv(1, R_t / 2 / T_t) / iv(0, R_t / 2 / T_t) +
                     1. / T_t / (np.exp(1. / T_t) - 1))
         dU_t *= units.kB * temperature
-        write(fmt % ('E_trans', dU_t))
+        vprint(fmt % ('E_trans', dU_t))
         U += dU_t
 
         # Rotational Energy
@@ -808,22 +808,22 @@ class HinderedThermo(ThermoChem):
                 iv(1, R_r / 2 / T_r) / iv(0, R_r / 2 / T_r) +
                 1. / T_r / (np.exp(1. / T_r) - 1))
         dU_r *= units.kB * temperature
-        write(fmt % ('E_rot', dU_r))
+        vprint(fmt % ('E_rot', dU_r))
         U += dU_r
 
         # Vibrational Energy
         dU_v = self.get_vib_energy_contribution(temperature)
-        write(fmt % ('E_vib', dU_v))
+        vprint(fmt % ('E_vib', dU_v))
         U += dU_v
 
         # Zero Point Energy
         dU_zpe = self.get_zero_point_energy()
-        write(fmt % ('E_ZPE', dU_zpe))
+        vprint(fmt % ('E_ZPE', dU_zpe))
         U += dU_zpe
 
-        write('-' * 31)
-        write(fmt % ('U', U))
-        write('=' * 31)
+        vprint('-' * 31)
+        vprint(fmt % ('U', U))
+        vprint('=' * 31)
         return U
 
     def get_zero_point_energy(self, verbose=True):
@@ -843,11 +843,11 @@ class HinderedThermo(ThermoChem):
         from scipy.special import iv
 
         self.verbose = verbose
-        write = self._vprint
+        vrpint = self._vprint
         fmt = '%-15s%13.7f eV/K%13.3f eV'
-        write('Entropy components at T = %.2f K:' % temperature)
-        write('=' * 49)
-        write('%15s%13s     %13s' % ('', 'S', 'T*S'))
+        vrpint('Entropy components at T = %.2f K:' % temperature)
+        vrpint('=' * 49)
+        vrpint('%15s%13s     %13s' % ('', 'S', 'T*S'))
 
         S = 0.
 
@@ -861,7 +861,7 @@ class HinderedThermo(ThermoChem):
                    1. / T_t / (np.exp(1. / T_t) - 1) -
                    np.log(1 - np.exp(-1. / T_t)))
         S_t *= units.kB
-        write(fmt % ('S_trans', S_t, S_t * temperature))
+        vrpint(fmt % ('S_trans', S_t, S_t * temperature))
         S += S_t
 
         # Rotational Entropy
@@ -874,12 +874,12 @@ class HinderedThermo(ThermoChem):
                1. / T_r / (np.exp(1. / T_r) - 1) -
                np.log(1 - np.exp(-1. / T_r)))
         S_r *= units.kB
-        write(fmt % ('S_rot', S_r, S_r * temperature))
+        vrpint(fmt % ('S_rot', S_r, S_r * temperature))
         S += S_r
 
         # Vibrational Entropy
         S_v = self.get_vib_entropy_contribution(temperature)
-        write(fmt % ('S_vib', S_v, S_v * temperature))
+        vrpint(fmt % ('S_vib', S_v, S_v * temperature))
         S += S_v
 
         # Concentration Related Entropy
@@ -887,12 +887,12 @@ class HinderedThermo(ThermoChem):
                                      (units._k * temperature))**(2. / 3)
         S_c = 1 - np.log(N_over_A) - np.log(self.area)
         S_c *= units.kB
-        write(fmt % ('S_con', S_c, S_c * temperature))
+        vrpint(fmt % ('S_con', S_c, S_c * temperature))
         S += S_c
 
-        write('-' * 49)
-        write(fmt % ('S', S, S * temperature))
-        write('=' * 49)
+        vrpint('-' * 49)
+        vrpint(fmt % ('S', S, S * temperature))
+        vrpint('=' * 49)
         return S
 
     def get_helmholtz_energy(self, temperature, verbose=True):
@@ -901,22 +901,22 @@ class HinderedThermo(ThermoChem):
         (K)."""
 
         self.verbose = True
-        write = self._vprint
+        vprint = self._vprint
 
         U = self.get_internal_energy(temperature, verbose=verbose)
-        write('')
+        vprint('')
         S = self.get_entropy(temperature, verbose=verbose)
         F = U - temperature * S
 
-        write('')
-        write('Free energy components at T = %.2f K:' % temperature)
-        write('=' * 23)
+        vprint('')
+        vprint('Free energy components at T = %.2f K:' % temperature)
+        vprint('=' * 23)
         fmt = '%5s%15.3f eV'
-        write(fmt % ('U', U))
-        write(fmt % ('-T*S', -temperature * S))
-        write('-' * 23)
-        write(fmt % ('F', F))
-        write('=' * 23)
+        vprint(fmt % ('U', U))
+        vprint(fmt % ('-T*S', -temperature * S))
+        vprint('-' * 23)
+        vprint(fmt % ('F', F))
+        vprint('=' * 23)
         return F
 
 
@@ -1009,39 +1009,39 @@ class IdealGasThermo(ThermoChem):
         at a specified temperature (K)."""
 
         self.verbose = verbose
-        write = self._vprint
+        vprint = self._vprint
         fmt = '%-15s%13.3f eV'
-        write('Enthalpy components at T = %.2f K:' % temperature)
-        write('=' * 31)
+        vprint('Enthalpy components at T = %.2f K:' % temperature)
+        vprint('=' * 31)
 
         H = 0.
 
-        write(fmt % ('E_pot', self.potentialenergy))
+        vprint(fmt % ('E_pot', self.potentialenergy))
         H += self.potentialenergy
 
         zpe = self.get_ZPE_correction()
-        write(fmt % ('E_ZPE', zpe))
+        vprint(fmt % ('E_ZPE', zpe))
         H += zpe
 
         Cv_tT = self.get_ideal_translational_energy(temperature)
-        write(fmt % ('Cv_trans (0->T)', Cv_tT))
+        vprint(fmt % ('Cv_trans (0->T)', Cv_tT))
         H += Cv_tT
 
         Cv_rT = self.get_ideal_rotational_energy(self.geometry, temperature)
-        write(fmt % ('Cv_rot (0->T)', Cv_rT ))
+        vprint(fmt % ('Cv_rot (0->T)', Cv_rT ))
         H += Cv_rT
 
         dH_v = self.get_vib_energy_contribution(temperature)
-        write(fmt % ('Cv_vib (0->T)', dH_v))
+        vprint(fmt % ('Cv_vib (0->T)', dH_v))
         H += dH_v
 
         Cp_corr = units.kB * temperature
-        write(fmt % ('(C_v -> C_p)', Cp_corr))
+        vprint(fmt % ('(C_v -> C_p)', Cp_corr))
         H += Cp_corr
 
-        write('-' * 31)
-        write(fmt % ('H', H))
-        write('=' * 31)
+        vprint('-' * 31)
+        vprint(fmt % ('H', H))
+        vprint('=' * 31)
         return H
 
     def get_entropy(self, temperature, pressure, verbose=True):
@@ -1053,12 +1053,12 @@ class IdealGasThermo(ThermoChem):
                                'specified for entropy and free energy '
                                'calculations.')
         self.verbose = verbose
-        write = self._vprint
+        vprint = self._vprint
         fmt = '%-15s%13.7f eV/K%13.3f eV'
-        write('Entropy components at T = %.2f K and P = %.1f Pa:' %
+        vprint('Entropy components at T = %.2f K and P = %.1f Pa:' %
               (temperature, pressure))
-        write('=' * 49)
-        write('%15s%13s     %13s' % ('', 'S', 'T*S'))
+        vprint('=' * 49)
+        vprint('%15s%13s     %13s' % ('', 'S', 'T*S'))
 
         S, S_dict = super().get_ideal_entropy(temperature,
                                 translation=True, vibration=True,
@@ -1066,14 +1066,14 @@ class IdealGasThermo(ThermoChem):
                                 electronic=True,
                                 pressure=pressure)
 
-        write(fmt % ('S_trans (1 bar)', S_dict['S_t'], S_dict['S_t'] * temperature))
-        write(fmt % ('S_rot', S_dict['S_r'], S_dict['S_r'] * temperature))
-        write(fmt % ('S_elec', S_dict['S_e'], S_dict['S_e'] * temperature))
-        write(fmt % ('S_vib', S_dict['S_v'], S_dict['S_v'] * temperature))
-        write(fmt % ('S (1 bar -> P)', S_dict['S_p'], S_dict['S_p'] * temperature))
-        write('-' * 49)
-        write(fmt % ('S', S, S * temperature))
-        write('=' * 49)
+        vprint(fmt % ('S_trans (1 bar)', S_dict['S_t'], S_dict['S_t'] * temperature))
+        vprint(fmt % ('S_rot', S_dict['S_r'], S_dict['S_r'] * temperature))
+        vprint(fmt % ('S_elec', S_dict['S_e'], S_dict['S_e'] * temperature))
+        vprint(fmt % ('S_vib', S_dict['S_v'], S_dict['S_v'] * temperature))
+        vprint(fmt % ('S (1 bar -> P)', S_dict['S_p'], S_dict['S_p'] * temperature))
+        vprint('-' * 49)
+        vprint(fmt % ('S', S, S * temperature))
+        vprint('=' * 49)
         return S
 
     def get_gibbs_energy(self, temperature, pressure, verbose=True):
@@ -1081,23 +1081,23 @@ class IdealGasThermo(ThermoChem):
         approximation at a specified temperature (K) and pressure (Pa)."""
 
         self.verbose = verbose
-        write = self._vprint
+        vprint = self._vprint
 
         H = self.get_enthalpy(temperature, verbose=verbose)
-        write('')
+        vprint('')
         S = self.get_entropy(temperature, pressure, verbose=verbose)
         G = H - temperature * S
 
-        write('')
-        write('Free energy components at T = %.2f K and P = %.1f Pa:' %
+        vprint('')
+        vprint('Free energy components at T = %.2f K and P = %.1f Pa:' %
               (temperature, pressure))
-        write('=' * 23)
+        vprint('=' * 23)
         fmt = '%5s%15.3f eV'
-        write(fmt % ('H', H))
-        write(fmt % ('-T*S', -temperature * S))
-        write('-' * 23)
-        write(fmt % ('G', G))
-        write('=' * 23)
+        vprint(fmt % ('H', H))
+        vprint(fmt % ('-T*S', -temperature * S))
+        vprint('-' * 23)
+        vprint(fmt % ('G', G))
+        vprint('=' * 23)
         return G
 
 
@@ -1150,15 +1150,15 @@ class CrystalThermo(ThermoChem):
         at a specified temperature (K)."""
 
         self.verbose = verbose
-        write = self._vprint
+        vprint = self._vprint
         fmt = '%-15s%13.4f eV'
         if self.formula_units == 0:
-            write('Internal energy components at '
+            vprint('Internal energy components at '
                   'T = %.2f K,\non a per-unit-cell basis:' % temperature)
         else:
-            write('Internal energy components at '
+            vprint('Internal energy components at '
                   'T = %.2f K,\non a per-formula-unit basis:' % temperature)
-        write('=' * 31)
+        vprint('=' * 31)
 
         U = 0.
 
@@ -1168,7 +1168,7 @@ class CrystalThermo(ThermoChem):
             omega_e = np.delete(omega_e, 0)
             dos_e = np.delete(dos_e, 0)
 
-        write(fmt % ('E_pot', self.potentialenergy))
+        vprint(fmt % ('E_pot', self.potentialenergy))
         U += self.potentialenergy
 
         zpe_list = omega_e / 2.
@@ -1176,7 +1176,7 @@ class CrystalThermo(ThermoChem):
             zpe = np.trapz(zpe_list * dos_e, omega_e)
         else:
             zpe = np.trapz(zpe_list * dos_e, omega_e) / self.formula_units
-        write(fmt % ('E_ZPE', zpe))
+        vprint(fmt % ('E_ZPE', zpe))
         U += zpe
 
         B = 1. / (units.kB * temperature)
@@ -1185,12 +1185,12 @@ class CrystalThermo(ThermoChem):
             E_phonon = np.trapz(E_vib * dos_e, omega_e)
         else:
             E_phonon = np.trapz(E_vib * dos_e, omega_e) / self.formula_units
-        write(fmt % ('E_phonon', E_phonon))
+        vprint(fmt % ('E_phonon', E_phonon))
         U += E_phonon
 
-        write('-' * 31)
-        write(fmt % ('U', U))
-        write('=' * 31)
+        vprint('-' * 31)
+        vprint(fmt % ('U', U))
+        vprint('=' * 31)
         return U
 
     def get_entropy(self, temperature, verbose=True):
@@ -1198,16 +1198,16 @@ class CrystalThermo(ThermoChem):
         at a specified temperature (K)."""
 
         self.verbose = verbose
-        write = self._vprint
+        vprint = self._vprint
         fmt = '%-15s%13.7f eV/K%13.4f eV'
         if self.formula_units == 0:
-            write('Entropy components at '
+            vprint('Entropy components at '
                   'T = %.2f K,\non a per-unit-cell basis:' % temperature)
         else:
-            write('Entropy components at '
+            vprint('Entropy components at '
                   'T = %.2f K,\non a per-formula-unit basis:' % temperature)
-        write('=' * 49)
-        write('%15s%13s     %13s' % ('', 'S', 'T*S'))
+        vprint('=' * 49)
+        vprint('%15s%13s     %13s' % ('', 'S', 'T*S'))
 
         omega_e = self.phonon_energies
         dos_e = self.phonon_DOS
@@ -1223,9 +1223,9 @@ class CrystalThermo(ThermoChem):
         else:
             S = np.trapz(S_vib * dos_e, omega_e) / self.formula_units
 
-        write('-' * 49)
-        write(fmt % ('S', S, S * temperature))
-        write('=' * 49)
+        vprint('-' * 49)
+        vprint(fmt % ('S', S, S * temperature))
+        vprint('=' * 49)
         return S
 
     def get_helmholtz_energy(self, temperature, verbose=True):
@@ -1233,27 +1233,27 @@ class CrystalThermo(ThermoChem):
         at a specified temperature (K)."""
 
         self.verbose = True
-        write = self._vprint
+        vprint = self._vprint
 
         U = self.get_internal_energy(temperature, verbose=verbose)
-        write('')
+        vprint('')
         S = self.get_entropy(temperature, verbose=verbose)
         F = U - temperature * S
 
-        write('')
+        vprint('')
         if self.formula_units == 0:
-            write('Helmholtz free energy components at '
+            vprint('Helmholtz free energy components at '
                   'T = %.2f K,\non a per-unit-cell basis:' % temperature)
         else:
-            write('Helmholtz free energy components at '
+            vprint('Helmholtz free energy components at '
                   'T = %.2f K,\non a per-formula-unit basis:' % temperature)
-        write('=' * 23)
+        vprint('=' * 23)
         fmt = '%5s%15.4f eV'
-        write(fmt % ('U', U))
-        write(fmt % ('-T*S', -temperature * S))
-        write('-' * 23)
-        write(fmt % ('F', F))
-        write('=' * 23)
+        vprint(fmt % ('U', U))
+        vprint(fmt % ('-T*S', -temperature * S))
+        vprint('-' * 23)
+        vprint(fmt % ('F', F))
+        vprint('=' * 23)
         return F
 
 
