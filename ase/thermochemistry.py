@@ -4,18 +4,31 @@ outputs."""
 import os
 import sys
 from warnings import warn
-from typing import Dict, List, Tuple, Literal
+from typing import Dict, List, Tuple, Literal, Optional
 from numbers import Real
-from abc import ABC
+from abc import ABC, abstractmethod
 
 import numpy as np
 
-from ase import units
+from ase import units, Atoms
 
 
-class ThermoChem(ABC):
+class BaseThermoChem(ABC):
     """Abstract base class containing common methods used in thermochemistry
     calculations."""
+
+    def __init__(self, vib_energies: np.ndarray, atoms: Optional[Atoms]=None) -> None:
+        self.vib_energies = vib_energies
+        if atoms:
+            self.atoms = atoms
+
+    @abstractmethod
+    def get_internal_energy(self, temperature: float, verbose: bool) -> float:
+        raise NotImplementedError
+    
+    @abstractmethod
+    def get_entropy(self, temperature: float, verbose: bool) -> float:
+        raise NotImplementedError
 
     @property
     def imag_modes_handling(self):
@@ -300,7 +313,7 @@ class ThermoChem(ABC):
         return [raise_to if x < raise_to else x for x in self.vib_energies]
 
 
-class HarmonicThermo(ThermoChem):
+class HarmonicThermo(BaseThermoChem):
     """Class for calculating thermodynamic properties in the approximation
     that all degrees of freedom are treated harmonically. Often used for
     adsorbates.
@@ -333,7 +346,7 @@ class HarmonicThermo(ThermoChem):
         vib_energies, n_imag = _clean_vib_energies(
             vib_energies, handling=imag_modes_handling
         )
-        self.vib_energies = vib_energies
+        super().__init__(vib_energies)
         self.n_imag = n_imag
 
         self.potentialenergy = potentialenergy
@@ -412,7 +425,7 @@ class HarmonicThermo(ThermoChem):
         return F
 
 
-class QuasiHarmonicThermo(ThermoChem):
+class QuasiHarmonicThermo(BaseThermoChem):
     """Subclass of :class:`ThermoChem`, including the quasi-harmonic
     approximation of Cramer, Truhlar and coworkers :doi:`10.1021/jp205508z`.
 
@@ -452,7 +465,7 @@ class QuasiHarmonicThermo(ThermoChem):
             vib_energies, handling=imag_modes_handling,
             value=raise_to
         )
-        self.vib_energies = vib_energies
+        super().__init__(vib_energies)
         self.n_imag = n_imag
         # raise the low frequencies to a certain value
         if imag_modes_handling == 'raise':
@@ -658,7 +671,7 @@ class MSRRHOThermo(QuasiHarmonicThermo):
 
 
 
-class HinderedThermo(ThermoChem):
+class HinderedThermo(BaseThermoChem):
     """Class for calculating thermodynamic properties in the hindered
     translator and hindered rotor model where all but three degrees of
     freedom are treated as harmonic vibrations, two are treated as
@@ -740,7 +753,7 @@ class HinderedThermo(ThermoChem):
         vib_energies, n_imag = _clean_vib_energies(
             vib_energies, handling=imag_modes_handling
         )
-        self.vib_energies = vib_energies
+        super().__init__(vib_energies)
         self.n_imag = n_imag
 
         if (mass or atoms) and (inertia or atoms):
@@ -914,7 +927,7 @@ class HinderedThermo(ThermoChem):
         return F
 
 
-class IdealGasThermo(ThermoChem):
+class IdealGasThermo(BaseThermoChem):
     """Class for calculating thermodynamic properties of a molecule
     based on statistical mechanical treatments in the ideal gas
     approximation.
@@ -993,7 +1006,7 @@ class IdealGasThermo(ThermoChem):
         vib_energies, n_imag = _clean_vib_energies(
             vib_energies, handling=imag_modes_handling
         )
-        self.vib_energies = vib_energies
+        super().__init__(vib_energies)
         self.n_imag = n_imag
 
         self.referencepressure = 1.0e5  # Pa
@@ -1037,6 +1050,9 @@ class IdealGasThermo(ThermoChem):
         vprint(fmt % ('H', H))
         vprint('=' * 31)
         return H
+    #alias for the abstract base class
+    get_internal_energy = get_enthalpy
+
 
     def get_entropy(self, temperature, pressure, verbose=True):
         """Returns the entropy, in eV/K, in the ideal gas approximation
@@ -1095,7 +1111,7 @@ class IdealGasThermo(ThermoChem):
         return G
 
 
-class CrystalThermo(ThermoChem):
+class CrystalThermo(BaseThermoChem):
     """Class for calculating thermodynamic properties of a crystalline
     solid in the approximation that a lattice of N atoms behaves as a
     system of 3N independent harmonic oscillators.
