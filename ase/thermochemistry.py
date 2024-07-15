@@ -434,7 +434,7 @@ class QuasiHarmonicThermo(ThermoChem):
 
     def __init__(self, vib_energies, potentialenergy=0.,
                  imag_modes_handling='raise',
-                 raise_to=100 * units.invcm, **kwargs) -> None:
+                 raise_to=100 * units.invcm) -> None:
 
         # Raise all imaginary frequencies
         vib_energies, n_imag = _clean_vib_energies(
@@ -444,7 +444,8 @@ class QuasiHarmonicThermo(ThermoChem):
         self.vib_energies = vib_energies
         self.n_imag = n_imag
         # raise the low frequencies to a certain value
-        self.vib_energies = self._raise(raise_to)
+        if imag_modes_handling == 'raise':
+            self.vib_energies = self._raise(raise_to)
         self.potentialenergy = potentialenergy
 
 
@@ -493,7 +494,7 @@ class QuasiHarmonicThermo(ThermoChem):
         return S
 
     
-    def get_helmholtz_energy(self, temperature, verbose=True)   ->float:
+    def get_helmholtz_energy(self, temperature, verbose=True) -> float:
         """Calculate the Helmholtz free energy (eV) at a specified temperature (K)
 
         Inputs:
@@ -555,21 +556,17 @@ class MSRRHOThermo(QuasiHarmonicThermo):
     def __init__(self, vib_energies, atoms, potentialenergy=0.,
                  tau=35, nu_scal=1.0) -> None:
         
-        # Check for imaginary frequencies.
-        vib_energies, n_imag = _clean_vib_energies(
-            vib_energies, handling='invert'
-        )
+        super().__init__(vib_energies, potentialenergy=potentialenergy,
+                            imag_modes_handling='invert')
         # scale the frequencies (i.e. energies) before passing them on
         self.nu_scal = nu_scal
-        self.vib_energies = np.multiply(vib_energies, self.nu_scal)
+        self.vib_energies = np.multiply(self.vib_energies, self.nu_scal)
         # perhaps later we can pass the scaling to the class above
-        self.n_imag = n_imag
         self.atoms = atoms
         self.tau = tau
         self.alpha = 4  # from paper 10.1002/chem.201200497
         # 1/s (tau to meters)
         self.tau_freq = units._c * self.tau * 1e2
-        self.potentialenergy = potentialenergy
 
 
     def get_entropy(self, temperature, verbose=True) -> float:
