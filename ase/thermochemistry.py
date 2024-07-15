@@ -18,6 +18,19 @@ class ThermoChem(ABC):
     calculations."""
 
     @property
+    def imag_modes_handling(self):
+        """For backwards compatibility, delete the following after some time."""
+        return self._imag_modes_handling
+    
+    @imag_modes_handling.setter
+    def imag_modes_handling(self, value):
+        """For backwards compatibility, raise a deprecation warning."""
+        warn("The imag_modes_handling attribute is deprecated and will be removed in a future release. "
+             "Please use the raise_to attribute instead.", DeprecationWarning)
+        self._imag_modes_handling = value
+
+
+    @property
     def frequencies(self):
         """Returns the vibrational frequencies in m^-1."""
         return np.array(self.vib_energies) / units._hplanck  * units._e 
@@ -304,11 +317,10 @@ class HarmonicThermo(ThermoChem):
 
     def __init__(self, vib_energies, potentialenergy=0.,
                  imag_modes_handling='error'):
-        self.imag_modes_handling = imag_modes_handling
 
         # Check for imaginary frequencies.
         vib_energies, n_imag = _clean_vib_energies(
-            vib_energies, handling=self.imag_modes_handling
+            vib_energies, handling=imag_modes_handling
         )
         self.vib_energies = vib_energies
         self.n_imag = n_imag
@@ -424,11 +436,9 @@ class quasiHarmonicThermo(ThermoChem):
                  imag_modes_handling='raise',
                  raise_to=100 * units.invcm, **kwargs) -> None:
 
-        self.imag_modes_handling = imag_modes_handling
-
         # Raise all imaginary frequencies
         vib_energies, n_imag = _clean_vib_energies(
-            vib_energies, handling=self.imag_modes_handling,
+            vib_energies, handling=imag_modes_handling,
             value=raise_to
         )
         self.vib_energies = vib_energies
@@ -546,9 +556,8 @@ class msRRHOThermo(quasiHarmonicThermo):
                  tau=35, nu_scal=1.0) -> None:
         
         # Check for imaginary frequencies.
-        self.imag_modes_handling = 'invert'
         vib_energies, n_imag = _clean_vib_energies(
-            vib_energies, handling=self.imag_modes_handling
+            vib_energies, handling='invert'
         )
         # scale the frequencies (i.e. energies) before passing them on
         self.nu_scal = nu_scal
@@ -722,7 +731,6 @@ class HinderedThermo(ThermoChem):
         self.potentialenergy = potentialenergy
         self.atoms = atoms
         self.symmetry = symmetrynumber
-        self.imag_modes_handling = imag_modes_handling
 
         # Sort the vibrations
         vib_energies = list(vib_energies)
@@ -736,7 +744,7 @@ class HinderedThermo(ThermoChem):
 
         # Check for imaginary frequencies.
         vib_energies, n_imag = _clean_vib_energies(
-            vib_energies, handling=self.imag_modes_handling
+            vib_energies, handling=imag_modes_handling
         )
         self.vib_energies = vib_energies
         self.n_imag = n_imag
@@ -968,7 +976,6 @@ class IdealGasThermo(ThermoChem):
         self.atoms = atoms
         self.sigma = symmetrynumber
         self.spin = spin
-        self.imag_modes_handling = imag_modes_handling
         if natoms is None and atoms:
             natoms = len(atoms)
         self.natoms = natoms
@@ -990,7 +997,7 @@ class IdealGasThermo(ThermoChem):
 
         # Check for imaginary frequencies.
         vib_energies, n_imag = _clean_vib_energies(
-            vib_energies, handling=self.imag_modes_handling
+            vib_energies, handling=imag_modes_handling
         )
         self.vib_energies = vib_energies
         self.n_imag = n_imag
