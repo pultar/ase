@@ -211,25 +211,25 @@ class ThermoChem(ABC):
         # eq 7
         return ((1 - self._head_gordon_damp(self.frequencies)) * S_r_components).sum()
     
-    def get_damped_vib_energy_contribution(self, temperature):
+    def get_damped_vib_energy_contribution(self, temperature) -> float:
         assert False, "Not implemented yet"
-        H_v_damp = 0.
+        E_v_damp = 0.
         R = units._k * units._Nav
 
         for n, freq in enumerate(self.frequencies):
             x = units._hplanck * freq / units._k
             comp = R * x * ( 0.5 + 1 / ( np.exp(x / temperature) - 1 ) )
-            H_v_damp += self._head_gordon_damp(freq) * comp
-        return H_v_damp
+            E_v_damp += self._head_gordon_damp(freq) * comp
+        return E_v_damp
     
-    def get_damped_free_rotor_energy_contribution(self, temperature):
+    def get_damped_free_rotor_energy_contribution(self, temperature) -> float:
         assert False, "Not implemented yet"
-        H_r_damp = 0.
+        E_r_damp = 0.
         R = units._k * units._Nav
         for n, freq in enumerate(self.frequencies):
             comp = 0.5 * R * temperature
-            H_r_damp += 1 - self._head_gordon_damp(freq) * comp
-        return H_r_damp
+            E_r_damp += 1 - self._head_gordon_damp(freq) * comp
+        return E_r_damp
     
     def get_ideal_entropy(self, temperature, translation=False,
                     vibration=False, rotation=False, geometry=None,
@@ -548,13 +548,19 @@ class MSRRHOThermo(QuasiHarmonicThermo):
         for values corresponding to your level of theory.
         Note that for `\\nu_{scal}=1.0` this method is equivalent to
         the quasi-RRHO method in :doi:`10.1002/chem.201200497`.
+    vibrational : bool
+        Extend the msRRHO treatement to the vibrational component of
+        the internal thermal energy. If False, only the rotational
+        contribution as in Grimmmes paper is considered. If true, the
+        approach of Otlyotov and Minenkov :doi:`10.1002/jcc.27129` is used.
 
     We enforce treating imaginary modes as Grimme suggests (converting 
     them to real by multiplying them with :math:`-i`).
     """
 
     def __init__(self, vib_energies, atoms, potentialenergy=0.,
-                 tau=35, nu_scal=1.0) -> None:
+                 tau=35, nu_scal=1.0,
+                 vibrational=False) -> None:
         
         super().__init__(vib_energies, potentialenergy=potentialenergy,
                             imag_modes_handling='invert')
@@ -567,6 +573,7 @@ class MSRRHOThermo(QuasiHarmonicThermo):
         self.alpha = 4  # from paper 10.1002/chem.201200497
         # 1/s (tau to meters)
         self.tau_freq = units._c * self.tau * 1e2
+        self.vibrational = vibrational
 
 
     def get_entropy(self, temperature, verbose=True) -> float:
@@ -601,7 +608,7 @@ class MSRRHOThermo(QuasiHarmonicThermo):
     
 
 
-    def get_msRRHO_energy(self, temperature, verbose=True) -> float:
+    def get_internal_energy(self, temperature, verbose=True) -> float:
         """Calculate the msRRHO energy (eV) at a specified temperature (K)
 
         Inputs:
@@ -612,51 +619,32 @@ class MSRRHOThermo(QuasiHarmonicThermo):
         Returns:
         float : The energy in eV.
         """
+
+        U = super().get_internal_energy(temperature, verbose=verbose)
         
-        from scipy.special import iv
-        self.verbose = verbose
-        vprint = self._vprint
-        fmt = '%-15s%13.3f eV'
-        vprint('Internal energy components at T = %.2f K:' % temperature)
-        vprint('=' * 31)
+        if self.vibrational:
+            assert False, "Not implemented yet"
+            # enable Otlyotov and Minenkov approach
+            E_trans = 2.5 * units._k * units._Nav * temperature 
+            vprint(fmt % ('E_trans', E_trans))
+            U += E_trans
 
-        U = 0
-        vprint(fmt % ('E_pot', self.potentialenergy))
-        U = self.potentialenergy
+            E_rot = 1.5 * units._k * units._Nav * temperature 
+            vprint(fmt % ('E_rot', E_rot))
+            U += E_rot
+            E_v_damp = self.get_damped_vib_energy_contribution(temperature)
+            vprint(fmt % ('E_vib_damp', E_v_damp))
+            U += E_v_damp
 
-        H_corr = 0
+            E_r_damp = self.get_damped_free_rotor_energy_contribution(temperature)
+            vprint(fmt % ('E_rot_damp', E_r_damp))
+            U += E_r_damp
 
-        #Only for printing
-        zpe = self.get_ZPE_correction()
-        vprint(fmt % ('E_ZPE', zpe))
-
-        #Only for printing 
-        H_vib = self.get_vib_energy_contribution(temperature)
-        vprint(fmt % ('Cv_harm (0->T)', H_vib))
-           
-
-        H_trans = 2.5 * units._k * units._Nav * temperature 
-        vprint(fmt % ('E_trans', H_RT))
-        H_corr += H_trans
-
-        H_rot = 1.5 * units._k * units._Nav * temperature 
-        vprint(fmt % ('E_rot', H_RT))
-        H_corr += H_rot
-
-        H_v_damp = self.get_damped_vib_energy_contribution(temperature)
-        vprint(fmt % ('E_vib_damp', H_v_damp))
-        H_corr += H_v_damp
-
-        H_r_damp = self.get_damped_free_rotor_energy_contribution(temperature)
-        vprint(fmt % ('E_rot_damp', H_r_damp))
-        H_corr += H_r_damp
-      
-        H_RT = units._k * units._Nav * temperature 
-        vprint(fmt % ('Thermal energy', H_RT))
-        H_corr += H_RT
+            E_RT = units._k * units._Nav * temperature 
+            vprint(fmt % ('Thermal energy', E_RT))
+            U += E_RT
         
-        return H_corr
-  
+        return U
 
 
 
