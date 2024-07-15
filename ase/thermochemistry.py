@@ -4,7 +4,8 @@ outputs."""
 import os
 import sys
 from warnings import warn
-from typing import Dict, List, Tuple
+from typing import Dict, List, Tuple, Literal
+from numbers import Real
 
 import numpy as np
 
@@ -40,7 +41,8 @@ class ThermoChem:
         return 3. / 2. * units.kB * temperature  # translational heat capacity (3-d gas)
 
     @staticmethod
-    def get_ideal_rotational_energy(geometry, temperature) -> float:
+    def get_ideal_rotational_energy(geometry: Literal["nonlinear", "linear", "monatomic"],
+                                    temperature: Real) -> float:
         """Returns the rotational heat capacity times T in eV.
         
         Parameters
