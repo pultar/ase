@@ -32,8 +32,8 @@ class ThermoChem(ABC):
 
     @property
     def frequencies(self):
-        """Returns the vibrational frequencies in m^-1."""
-        return np.array(self.vib_energies) / units._hplanck  * units._e 
+        """Returns the vibrational frequencies in cm^-1."""
+        return np.array(self.vib_energies) / units.invcm
     
     def get_ZPE_correction(self):
         """Returns the zero-point vibrational energy correction in eV."""
@@ -138,8 +138,18 @@ class ThermoChem(ABC):
     def _head_gordon_damp(self, freq) -> float:
         """Head-Gordon damping function.
 
-        Equation 8 from :doi:`10.1002/chem.201200497`"""
-        ret = 1 / (1 + (self.tau_freq / freq)**self.alpha)
+        Equation 8 from :doi:`10.1002/chem.201200497`
+        
+        Parameters
+        ----------
+        freq : float
+            The frequency in the same unit as self.tau.
+
+        Returns
+        -------
+        float
+        """
+        ret = 1 / (1 + (self.tau / freq)**self.alpha)
 
         return ret
 
@@ -147,7 +157,7 @@ class ThermoChem(ABC):
         """qRRHO Vibrational Entropy Contribution from
         :doi:`10.1002/chem.201200497`.
 
-        Uses tau_freq to switch between S_v and S_r.
+        Uses tau to switch between S_v and S_r.
 
         Returns the entropy in eV/K."""
         qRRHO_vib = self.get_vib_entropy_contribution(temperature, return_list=True)
@@ -157,7 +167,7 @@ class ThermoChem(ABC):
         S = 0.
         #simply use a cutoff to switch between S_v and S_r
         for n, freq in enumerate(self.frequencies):
-            if freq < self.tau_freq:
+            if freq < self.tau:
                 S += qRRHO_rot[n]
             else:
                 S += qRRHO_vib[n]
@@ -172,13 +182,14 @@ class ThermoChem(ABC):
         # rotational entropy
         S_r_damp = 0.
         kT = units._k * temperature
-        R = units._k * units._Nav
-        inertias = (self.atoms.get_moments_of_inertia() * units._amu /
-                    (1e10**2))  # from amu/A^2 to kg m^2
+        R = units._k
+        inertias = (self.atoms.get_moments_of_inertia() /
+                    (units.kg * units.m**2))  # from amu/A^2 to kg m^2
         B_av = np.mean(inertias)
 
         # eq 4
-        mu = units._hplanck / (8 * np.pi**2 * self.frequencies)
+        omega = 2 * np.pi * (units._c * self.frequencies * 1e2)   # s^-1
+        mu = units._hplanck / (8 * np.pi**2 * omega)  # kg m^2
         # eq 5
         mu_prime = (mu * B_av) / (mu + B_av)  # kg m^2
         # eq 6
@@ -186,7 +197,7 @@ class ThermoChem(ABC):
         # filter zeros out and set them to zero
         log_x = np.log(x, out=np.zeros_like(x, dtype='float64'), where=(x != 0))
         S_r_components = R * (1 / 2 + log_x)  # J/(Js)^2
-        S_r_components *= units.J / units._Nav
+        S_r_components *= units.J
         return S_r_components
 
 
@@ -217,7 +228,7 @@ class ThermoChem(ABC):
         R = units._k * units._Nav
 
         for n, freq in enumerate(self.frequencies):
-            x = units._hplanck * freq / units._k
+            x = units._hplanck * freq * 100 / units._k
             comp = R * x * ( 0.5 + 1 / ( np.exp(x / temperature) - 1 ) )
             E_v_damp += self._head_gordon_damp(freq) * comp
         return E_v_damp
@@ -569,10 +580,8 @@ class MSRRHOThermo(QuasiHarmonicThermo):
         self.vib_energies = np.multiply(self.vib_energies, self.nu_scal)
         # perhaps later we can pass the scaling to the class above
         self.atoms = atoms
-        self.tau = tau
+        self.tau = tau * units._c
         self.alpha = 4  # from paper 10.1002/chem.201200497
-        # 1/s (tau to meters)
-        self.tau_freq = units._c * self.tau * 1e2
         self.vibrational = vibrational
 
 
