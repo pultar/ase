@@ -6,14 +6,15 @@ import sys
 from warnings import warn
 from typing import Dict, List, Tuple, Literal
 from numbers import Real
+from abc import ABC
 
 import numpy as np
 
 from ase import units
 
 
-class ThermoChem:
-    """Base class containing common methods used in thermochemistry
+class ThermoChem(ABC):
+    """Abstract base class containing common methods used in thermochemistry
     calculations."""
 
     @property
