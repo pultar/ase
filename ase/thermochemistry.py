@@ -401,7 +401,7 @@ class HarmonicThermo(ThermoChem):
         return F
 
 
-class quasiHarmonicThermo(ThermoChem):
+class QuasiHarmonicThermo(ThermoChem):
     """Subclass of :class:`ThermoChem`, including the quasi-harmonic
     approximation of Cramer, Truhlar and coworkers :doi:`10.1021/jp205508z`.
 
@@ -526,8 +526,8 @@ class quasiHarmonicThermo(ThermoChem):
         return F
 
 
-class msRRHOThermo(quasiHarmonicThermo):
-    """Subclass of :class:`quasiHarmonicThermo`, including Grimme's scaling method
+class MSRRHOThermo(QuasiHarmonicThermo):
+    """Subclass of :class:`QuasiHarmonicThermo`, including Grimme's scaling method
     based on :doi:`10.1002/chem.201200497` and :doi:`10.1039/D1SC00621E`.
 
     Inputs:

@@ -77,14 +77,14 @@ Derivations
 
 There are some derivations of the standard procedure for calculating the
 thermodynamic properties in the harmonic limit. Currently, ASE provides a
-class :class:`quasiHarmonicThermo` based on the quasi-Harmonic approximation
+class :class:`QuasiHarmonicThermo` based on the quasi-Harmonic approximation
 by Cramer, Truhlar and coworkers (:doi:`10.1021/jp205508z`) and a 
-:class:`msRRHOThermo` based on the modified
+:class:`MSRRHOThermo` based on the modified
 rigid-rotor-harmonic-oscillator (msRRHO) approximation by Grimme *et al.*
 (:doi:`10.1002/chem.201200497` and :doi:`10.1039/D1SC00621E`). 
 
-.. autoclass:: quasiHarmonicThermo
-.. autoclass:: msRRHOThermo
+.. autoclass:: QuasiHarmonicThermo
+.. autoclass:: MSRRHOThermo
 
 
 

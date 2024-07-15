@@ -7,8 +7,8 @@ from ase.calculators.emt import EMT
 from ase.optimize import QuasiNewton
 from ase.phonons import Phonons
 from ase.thermochemistry import (CrystalThermo, HarmonicThermo, HinderedThermo,
-                                 IdealGasThermo, quasiHarmonicThermo,
-                                 msRRHOThermo)
+                                 IdealGasThermo, QuasiHarmonicThermo,
+                                 MSRRHOThermo)
 from ase.vibrations import Vibrations
 
 
@@ -313,7 +313,7 @@ def quasi_harmonic_thermo(
     imag_modes_handling='raise',
     raise_to=100 * units.invcm
 ):
-    return quasiHarmonicThermo(
+    return QuasiHarmonicThermo(
         vib_energies=vib_energies if vib_energies else VIB_ENERGIES_HARMONIC,
         potentialenergy=potentialenergy,
         imag_modes_handling=imag_modes_handling,
@@ -349,7 +349,7 @@ def msRRHO_thermo(
     potentialenergy=0.0,
     **kwargs
 ):
-    return msRRHOThermo(
+    return MSRRHOThermo(
         atoms=atoms,
         tau=tau,
         vib_energies=vib_energies if vib_energies else VIB_ENERGIES_HARMONIC,
