@@ -3,18 +3,7 @@ import pytest
 from ase.build import bulk, molecule
 from ase.calculators.conquest import Conquest#, EspressoProfile
 
-conquest_versions = [
-    ('6.4.1', """
-Program PWSCF v.6.4.1 starts on  5Aug2021 at 11: 2:26
-
-This program is part of the open-source Quantum ESPRESSO suite
-"""),
-    ('6.7MaX', """
-
-Program PWSCF v.6.7MaX starts on  1Oct2022 at 16:26:59
-
-This program is part of the open-source Quantum ESPRESSO suite
-#""")]
+conquest_versions = []
 
 
 #@pytest.mark.parametrize('version, txt', espresso_versions)
