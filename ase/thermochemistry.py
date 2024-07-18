@@ -1011,6 +1011,42 @@ class IdealGasThermo(BaseThermoChem):
 
         self.referencepressure = 1.0e5  # Pa
 
+    def get_internal_energy(self, temperature, verbose=True):
+        """Returns the internal energy, in eV, in the ideal gas approximation
+        at a specified temperature (K)."""
+
+        self.verbose = verbose
+        vprint = self._vprint
+        fmt = '%-15s%13.3f eV'
+        vprint('Enthalpy components at T = %.2f K:' % temperature)
+        vprint('=' * 31)
+
+        U = 0.
+
+        vprint(fmt % ('E_pot', self.potentialenergy))
+        U += self.potentialenergy
+
+        zpe = self.get_ZPE_correction()
+        vprint(fmt % ('E_ZPE', zpe))
+        U += zpe
+
+        Cv_tT = self.get_ideal_translational_energy(temperature)
+        vprint(fmt % ('Cv_trans (0->T)', Cv_tT))
+        U += Cv_tT
+
+        Cv_rT = self.get_ideal_rotational_energy(self.geometry, temperature)
+        vprint(fmt % ('Cv_rot (0->T)', Cv_rT ))
+        U += Cv_rT
+
+        dU_v = self.get_vib_energy_contribution(temperature)
+        vprint(fmt % ('Cv_vib (0->T)', dU_v))
+        U += dU_v
+
+        vprint('-' * 31)
+        vprint(fmt % ('U', U))
+        vprint('=' * 31)
+        return U
+
     def get_enthalpy(self, temperature, verbose=True):
         """Returns the enthalpy, in eV, in the ideal gas approximation
         at a specified temperature (K)."""
@@ -1022,25 +1058,7 @@ class IdealGasThermo(BaseThermoChem):
         vprint('=' * 31)
 
         H = 0.
-
-        vprint(fmt % ('E_pot', self.potentialenergy))
-        H += self.potentialenergy
-
-        zpe = self.get_ZPE_correction()
-        vprint(fmt % ('E_ZPE', zpe))
-        H += zpe
-
-        Cv_tT = self.get_ideal_translational_energy(temperature)
-        vprint(fmt % ('Cv_trans (0->T)', Cv_tT))
-        H += Cv_tT
-
-        Cv_rT = self.get_ideal_rotational_energy(self.geometry, temperature)
-        vprint(fmt % ('Cv_rot (0->T)', Cv_rT ))
-        H += Cv_rT
-
-        dH_v = self.get_vib_energy_contribution(temperature)
-        vprint(fmt % ('Cv_vib (0->T)', dH_v))
-        H += dH_v
+        H += self.get_internal_energy(temperature, verbose=verbose)
 
         Cp_corr = units.kB * temperature
         vprint(fmt % ('(C_v -> C_p)', Cp_corr))
@@ -1050,8 +1068,6 @@ class IdealGasThermo(BaseThermoChem):
         vprint(fmt % ('H', H))
         vprint('=' * 31)
         return H
-    #alias for the abstract base class
-    get_internal_energy = get_enthalpy
 
 
     def get_entropy(self, temperature, pressure, verbose=True):
