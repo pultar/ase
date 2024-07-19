@@ -13,6 +13,67 @@ import numpy as np
 from ase import units, Atoms
 
 
+class AbstractMode(ABC):
+    """Abstract base class for mode objects."""
+
+    def __init__(self, energy: float) -> None:
+        self.energy = energy
+
+    @abstractmethod
+    def get_internal_energy(self, temperature: float, contributions: bool) -> float:
+        raise NotImplementedError
+    
+    @abstractmethod
+    def get_entropy(self, temperature: float, contributions: bool) -> float:
+        raise NotImplementedError
+    
+    def get_ZPE_correction(self):
+        """Returns the zero-point vibrational energy correction in eV."""
+        return 0.5 * self.energy
+    
+    def get_vib_energy_contribution(self, temperature) -> float:
+        """Calculates the change in internal energy due to vibrations from
+        0K to the specified temperature for a set of vibrations given in
+        eV and a temperature given in Kelvin.
+        Returns the energy change in eV."""
+        kT = units.kB * temperature
+        return self.energy / (np.exp(self.energy / kT) - 1.)
+
+    def get_vib_entropy_contribution(self, temperature):
+        """Calculates the entropy due to vibrations given in eV and a
+        temperature given in Kelvin.  Returns the entropy in eV/K."""
+        kT = units.kB * temperature
+        e = self.energy / kT
+        S_v = e / (np.exp(e) - 1.) - np.log(1. - np.exp(-e))
+        S_v *= units.kB
+        return S_v
+
+class HarmonicMode(AbstractMode):
+    """Class for a single harmonic mode."""
+
+    def get_internal_energy(self, temperature: float, contributions: bool) -> float:
+        """Returns the internal energy in the harmonic approximation at a
+        specified temperature (K)."""
+        ret = {}
+        ret['ZPE'] = self.get_ZPE_correction()
+        ret['dU_v'] = self.get_vib_energy_contribution(temperature)
+
+        if contributions:
+            return ret['ZPE'] + ret['dU_v'], ret
+        else:
+            return ret['ZPE'] + ret['dU_v']
+
+    def get_entropy(self, temperature: float, contributions: bool) -> float:
+        """Returns the entropy in the harmonic approximation at a specified
+        temperature (K)."""
+        ret = {}
+        ret['S_v'] = self.get_vib_entropy_contribution(temperature)
+        if contributions:
+            return ret['S_v'], ret
+        else:
+            return ret['S_v']
+
+
 class BaseThermoChem(ABC):
     """Abstract base class containing common methods used in thermochemistry
     calculations."""
@@ -21,6 +82,24 @@ class BaseThermoChem(ABC):
         self.vib_energies = vib_energies
         if atoms:
             self.atoms = atoms
+
+    def combine_contributions(self, contrib_dicts: List[Dict[str, float]]) -> Dict[str, float]:
+        """Combine the contributions from multiple modes."""
+        ret = {}
+        for contrib_dict in contrib_dicts:
+            for key, value in contrib_dict.items():
+                if key in ret:
+                    ret[key] += value
+                else:
+                    ret[key] = value
+        return ret
+    
+    def print_contributions(self, contributions: Dict[str, float], verbose: bool) -> None:
+        """Print the contributions."""
+        if verbose:
+            fmt = "{:<15s}{:13.3f} eV"
+            for key, value in contributions.items():
+                self._vprint(fmt.format(key, value))
 
     @abstractmethod
     def get_internal_energy(self, temperature: float, verbose: bool) -> float:
@@ -346,7 +425,12 @@ class HarmonicThermo(BaseThermoChem):
         vib_energies, n_imag = _clean_vib_energies(
             vib_energies, handling=imag_modes_handling
         )
-        super().__init__(vib_energies)
+        #super().__init__(vib_energies)
+        self.vib_energies = vib_energies
+        self.modes = []
+        for energy in vib_energies:
+            self.modes.append(HarmonicMode(energy))
+
         self.n_imag = n_imag
 
         self.potentialenergy = potentialenergy
@@ -361,22 +445,18 @@ class HarmonicThermo(BaseThermoChem):
         vprint('Internal energy components at T = %.2f K:' % temperature)
         vprint('=' * 31)
 
-        U = 0.
-
         vprint(fmt % ('E_pot', self.potentialenergy))
+
+        U, contribs = zip(*[mode.get_internal_energy(
+            temperature, contributions=True) for mode in self.modes])
+        U = np.sum(U)
         U += self.potentialenergy
 
-        zpe = self.get_ZPE_correction()
-        vprint(fmt % ('E_ZPE', zpe))
-        U += zpe
-
-        dU_v = self.get_vib_energy_contribution(temperature)
-        vprint(fmt % ('Cv_harm (0->T)', dU_v))
-        U += dU_v
-
+        self.print_contributions(self.combine_contributions(contribs), verbose)
         vprint('-' * 31)
         vprint(fmt % ('U', U))
         vprint('=' * 31)
+
         return U
 
     def get_entropy(self, temperature, verbose=True):
@@ -390,15 +470,16 @@ class HarmonicThermo(BaseThermoChem):
         vprint('=' * 49)
         vprint('%15s%13s     %13s' % ('', 'S', 'T*S'))
 
-        S = 0.
 
-        S_v = self.get_vib_entropy_contribution(temperature)
-        vprint(fmt % ('S_harm', S_v, S_v * temperature))
-        S += S_v
+        S, contribs = zip(*[mode.get_entropy(
+            temperature, contributions=True) for mode in self.modes])
+        S = np.sum(S)
 
+        self.print_contributions(self.combine_contributions(contribs), verbose)
         vprint('-' * 49)
         vprint(fmt % ('S', S, S * temperature))
         vprint('=' * 49)
+
         return S
 
     def get_helmholtz_energy(self, temperature, verbose=True):
