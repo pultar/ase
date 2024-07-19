@@ -4,7 +4,7 @@ outputs."""
 import os
 import sys
 from warnings import warn
-from typing import Dict, List, Tuple, Literal, Optional
+from typing import Dict, List, Tuple, Literal, Optional, Type, Sequence, Union
 from numbers import Real
 from abc import ABC, abstractmethod
 
@@ -51,19 +51,22 @@ class AbstractMode(ABC):
 class HarmonicMode(AbstractMode):
     """Class for a single harmonic mode."""
 
-    def get_internal_energy(self, temperature: float, contributions: bool) -> float:
+    def get_internal_energy(self, temperature: float,
+        contributions: bool) -> Union[float, Tuple[float, Dict[str, float]]]:
         """Returns the internal energy in the harmonic approximation at a
         specified temperature (K)."""
         ret = {}
         ret['ZPE'] = self.get_ZPE_correction()
         ret['dU_v'] = self.get_vib_energy_contribution(temperature)
+        ret_sum = np.sum([ value for key, value in ret.items() ])
 
         if contributions:
-            return ret['ZPE'] + ret['dU_v'], ret
+            return ret_sum, ret
         else:
-            return ret['ZPE'] + ret['dU_v']
+            return ret_sum
 
-    def get_entropy(self, temperature: float, contributions: bool) -> float:
+    def get_entropy(self, temperature: float,
+        contributions: bool) -> Union[float, Tuple[float, Dict[str, float]]]:
         """Returns the entropy in the harmonic approximation at a specified
         temperature (K)."""
         ret = {}
@@ -78,12 +81,16 @@ class BaseThermoChem(ABC):
     """Abstract base class containing common methods used in thermochemistry
     calculations."""
 
-    def __init__(self, vib_energies: np.ndarray, atoms: Optional[Atoms]=None) -> None:
-        self.vib_energies = vib_energies
+    def __init__(self, vib_energies: np.ndarray, atoms: Optional[Atoms]=None,
+                 modes: Optional[List[Type[AbstractMode]]]=None) -> None:
+        self._vib_energies = vib_energies
         if atoms:
             self.atoms = atoms
+        if modes:
+            self.modes = modes
 
-    def combine_contributions(self, contrib_dicts: List[Dict[str, float]]) -> Dict[str, float]:
+    @staticmethod
+    def combine_contributions(contrib_dicts: List[Dict[str, float]]) -> Dict[str, float]:
         """Combine the contributions from multiple modes."""
         ret = {}
         for contrib_dict in contrib_dicts:
@@ -108,6 +115,18 @@ class BaseThermoChem(ABC):
     @abstractmethod
     def get_entropy(self, temperature: float, verbose: bool) -> float:
         raise NotImplementedError
+
+    @property
+    def vib_energies(self):
+        """For backwards compatibility, delete the following after some time."""
+        return self._vib_energies
+    
+    @vib_energies.setter
+    def vib_energies(self, value):
+        """For backwards compatibility, raise a deprecation warning."""
+        #warn("The vib_energies attribute is deprecated and will be removed in a future release. "
+        #     "Please use the modes attribute instead.", DeprecationWarning)
+        self._vib_energies = value
 
     @property
     def imag_modes_handling(self):
@@ -425,11 +444,7 @@ class HarmonicThermo(BaseThermoChem):
         vib_energies, n_imag = _clean_vib_energies(
             vib_energies, handling=imag_modes_handling
         )
-        #super().__init__(vib_energies)
-        self.vib_energies = vib_energies
-        self.modes = []
-        for energy in vib_energies:
-            self.modes.append(HarmonicMode(energy))
+        super().__init__(vib_energies, modes=[HarmonicMode(energy) for energy in vib_energies])
 
         self.n_imag = n_imag
 
@@ -1089,7 +1104,6 @@ class IdealGasThermo(BaseThermoChem):
         )
         super().__init__(vib_energies)
         self.n_imag = n_imag
-
         self.referencepressure = 1.0e5  # Pa
 
     def get_internal_energy(self, temperature, verbose=True):
