@@ -138,17 +138,13 @@ class RRHOMode(HarmonicMode):
         Returns the entropy contribution in eV/K."""
         kT = units._k * temperature
         R = units._k
-        print("mean inertia", self._mean_inertia)
         B_av = (self._mean_inertia /
                     (units.kg * units.m**2))  # from amu/A^2 to kg m^2
         # eq 4
         omega = 2 * np.pi * (units._c * self.frequency * 1e2)   # s^-1
-        print("frequency", self.frequency)
-        print("omega", omega)
         mu = units._hplanck / (8 * np.pi**2 * omega)  # kg m^2
         # eq 5
         mu_prime = (mu * B_av) / (mu + B_av)  # kg m^2
-        print("mu_prime", mu_prime)
         # eq 6
         x = np.sqrt(8 * np.pi**3 * mu_prime * kT / (units._hplanck)**2)
         # filter zeros out and set them to zero
@@ -736,8 +732,6 @@ class MSRRHOThermo(QuasiHarmonicThermo):
         
         
         inertia = np.mean(atoms.get_moments_of_inertia())
-        print("atoms.get_moments_of_inertia()", atoms.get_moments_of_inertia())
-        print("mean inertia", inertia)
         self.atoms = atoms
         
         # clean the energies
@@ -757,9 +751,6 @@ class MSRRHOThermo(QuasiHarmonicThermo):
                             modes=modes,
                             raise_to=0.0)
         self.vibrational = vibrational
-        #remove
-        self.alpha = 4
-        self.tau = tau * units._c
 
 
     def get_entropy(self, temperature, verbose=True) -> float:
@@ -783,9 +774,7 @@ class MSRRHOThermo(QuasiHarmonicThermo):
 
         S, contribs = zip(*[mode.get_entropy(
             temperature, contributions=True) for mode in self.modes])
-        print("S", S)
         S = np.sum(S)
-        print("S", S)
 
         self.print_contributions(self.combine_contributions(contribs), verbose)
         vprint('-' * 49)
