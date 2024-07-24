@@ -548,15 +548,22 @@ class HarmonicThermo(BaseThermoChem):
         If 'error' (default), an error will be raised if any imaginary
         frequencies are present.
         If 'invert', the imaginary frequencies will be multiplied by -i.
+        If 'raise', the imaginary frequencies will be raised to a
+        certain value, specified by the *raise_to* keyword.
+    raise_to : float
+        The value to which imaginary frequencies will be
+        raised, if *imag_modes_handling* is 'raise'.
     """
 
     def __init__(self, vib_energies: List[float], potentialenergy: float=0.,
                  imag_modes_handling: str='error',
+                 raise_to: float=None,
                  modes: List[AbstractMode]=None) -> None:
 
         # Check for imaginary frequencies.
         vib_energies, n_imag = _clean_vib_energies(
-            vib_energies, handling=imag_modes_handling
+            vib_energies, handling=imag_modes_handling,
+            value=raise_to
         )
         if modes is None:
             modes = [HarmonicMode(energy) for energy in vib_energies]
@@ -637,8 +644,8 @@ class HarmonicThermo(BaseThermoChem):
         return F
 
 
-class QuasiHarmonicThermo(BaseThermoChem):
-    """Subclass of :class:`ThermoChem`, including the quasi-harmonic
+class QuasiHarmonicThermo(HarmonicThermo):
+    """Subclass of :class:`HarmonicThermo`, including the quasi-harmonic
     approximation of Cramer, Truhlar and coworkers :doi:`10.1021/jp205508z`.
 
     Inputs:
@@ -670,102 +677,25 @@ class QuasiHarmonicThermo(BaseThermoChem):
 
     """
 
-    def __init__(self, vib_energies, potentialenergy=0.,
+    def __init__(self, vib_energies: List[float], potentialenergy: float=0.,
+                 imag_modes_handling: str='error',
                  modes: List[AbstractMode]=None,
-                 imag_modes_handling='error',
                  raise_to=100 * units.invcm) -> None:
 
-        # Raise all imaginary frequencies
+        # Check for imaginary frequencies.
         vib_energies, n_imag = _clean_vib_energies(
             vib_energies, handling=imag_modes_handling,
             value=raise_to
         )
-        self.n_imag = n_imag
         # raise the low frequencies to a certain value
         self.vib_energies = vib_energies
         self.vib_energies = self._raise(raise_to)
         if modes is None:
-            modes = [HarmonicMode(energy) for energy in vib_energies]
-        super().__init__(self.vib_energies, modes=modes)
-        self.potentialenergy = potentialenergy
-
-
-    def get_internal_energy(self, temperature, verbose=True):
-        """Returns the internal energy, in eV, in the harmonic approximation
-        at a specified temperature (K)."""
-        #copy paste of HarmonicThermo.get_internal_energy at the moment
-        self.verbose = verbose
-        vprint = self._vprint
-        fmt = '%-15s%13.3f eV'
-        vprint('Internal energy components at T = %.2f K:' % temperature)
-        vprint('=' * 31)
-
-        U = 0.
-
-        vprint(fmt % ('E_pot', self.potentialenergy))
-        U += self.potentialenergy
-
-        zpe = self.get_ZPE_correction()
-        vprint(fmt % ('E_ZPE', zpe))
-        U += zpe
-
-        dU_v = self.get_vib_energy_contribution(temperature)
-        vprint(fmt % ('Cv_harm (0->T)', dU_v))
-        U += dU_v
-
-        vprint('-' * 31)
-        vprint(fmt % ('U', U))
-        vprint('=' * 31)
-        return U
-
-
-    def get_entropy(self, temperature, verbose=True):
-        self.verbose = verbose
-        vprint = self._vprint
-        fmt = '%-15s%13.7f eV/K%13.3f eV'
-        vprint('Entropy components at T = %.2f K:' % temperature)
-        vprint('=' * 49)
-        vprint('%15s%13s     %13s' % ('', 'S', 'T*S'))
-        S, S_dict = super().get_ideal_entropy(temperature=temperature, vibration=True)
-
-        vprint(fmt % ('S_harm', S_dict['S_v'], S_dict['S_v'] * temperature))
-        vprint('-' * 49)
-        vprint(fmt % ('S', S, S * temperature))
-        vprint('=' * 49)
-        return S
-
-    
-    def get_helmholtz_energy(self, temperature, verbose=True) -> float:
-        """Calculate the Helmholtz free energy (eV) at a specified temperature (K)
-
-        Inputs:
-        temperature : float
-            The temperature in Kelvin.
-        verbose : bool
-            If True, print the energy components.
-
-        Returns:
-        float : The Helmholtz free energy
-        """
-        #copy paste of HarmonicThermo.get_helmholtz_energy at the moment
-        self.verbose = True
-        vprint = self._vprint
-
-        U = self.get_internal_energy(temperature, verbose=verbose)
-        vprint('')
-        S = self.get_entropy(temperature, verbose=verbose)
-        F = U - temperature * S
-
-        vprint('')
-        vprint('Free energy components at T = %.2f K:' % temperature)
-        vprint('=' * 23)
-        fmt = '%5s%15.3f eV'
-        vprint(fmt % ('U', U))
-        vprint(fmt % ('-T*S', -temperature * S))
-        vprint('-' * 23)
-        vprint(fmt % ('F', F))
-        vprint('=' * 23)
-        return F
+            modes = [HarmonicMode(energy) for energy in self.vib_energies]
+        super().__init__(self.vib_energies, potentialenergy=potentialenergy,
+                        imag_modes_handling=imag_modes_handling,
+                        raise_to=raise_to,
+                        modes=modes)
 
 
 class MSRRHOThermo(QuasiHarmonicThermo):
