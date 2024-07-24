@@ -19,6 +19,11 @@ class AbstractMode(ABC):
     def __init__(self, energy: float) -> None:
         self.energy = energy
 
+    @staticmethod
+    def sum_contributions(contrib_dicts: List[Dict[str, float]]) -> float:
+        """Combine a Dict of floats to their sum."""
+        return np.sum([ value for key, value in contrib_dicts.items() ])
+
     @abstractmethod
     def get_internal_energy(self, temperature: float, contributions: bool) -> float:
         raise NotImplementedError
@@ -58,7 +63,7 @@ class HarmonicMode(AbstractMode):
         ret = {}
         ret['ZPE'] = self.get_ZPE_correction()
         ret['dU_v'] = self.get_vib_energy_contribution(temperature)
-        ret_sum = np.sum([ value for key, value in ret.items() ])
+        ret_sum = self.sum_contributions(ret)
 
         if contributions:
             return ret_sum, ret
@@ -75,6 +80,114 @@ class HarmonicMode(AbstractMode):
             return ret['S_v'], ret
         else:
             return ret['S_v']
+
+
+class RRHOMode(HarmonicMode):
+    """Class for a single RRHO mode, including Grimme's scaling method
+    based on :doi:`10.1002/chem.201200497` and :doi:`10.1039/D1SC00621E`.
+
+    Inputs:
+
+    mean_inertia : float
+        The mean moment of inertia in amu*angstrom^2. Use
+        `np.mean(ase.Atoms.get_moments_of_inertia())` to calculate.
+    tau : float
+        the vibrational energy threshold in :math:`cm^{-1}`, named
+        :math:`\\tau` in :doi:`10.1039/D1SC00621E`.
+        Values close or equal to 0 will result in the standard harmonic
+        approximation. Defaults to :math:`35cm^{-1}`.
+    """
+
+    def __init__(self, energy: float,
+                mean_inertia: float,
+                tau: float=35.0) -> None:
+        if np.iscomplex(energy):
+            raise ValueError("Imaginary frequencies are not allowed in RRHO mode.")
+        super().__init__(energy)
+        self._mean_inertia = mean_inertia
+        self._tau = tau * units._c
+        self.alpha = 4  # from paper 10.1002/chem.201200497
+
+
+    @property
+    def frequency(self) -> float:
+        return self.energy / units.invcm
+    
+    def _head_gordon_damp(self, freq: float) -> float:
+        """Head-Gordon damping function.
+
+        Equation 8 from :doi:`10.1002/chem.201200497`
+        
+        Parameters
+        ----------
+        freq : float
+            The frequency in the same unit as tau.
+
+        Returns
+        -------
+        float
+        """
+        return 1 / (1 + (self._tau / freq)**self.alpha)
+    
+
+    def get_qRRHO_entropy_r(self, temperature) -> np.array:
+        """Calculates the rotation of a rigid rotor for low frequency modes.
+
+        Equation numbering from :doi:`10.1002/chem.201200497`
+
+        Returns the entropy contribution in eV/K."""
+        kT = units._k * temperature
+        R = units._k
+        print("mean inertia", self._mean_inertia)
+        B_av = (self._mean_inertia /
+                    (units.kg * units.m**2))  # from amu/A^2 to kg m^2
+        # eq 4
+        omega = 2 * np.pi * (units._c * self.frequency * 1e2)   # s^-1
+        print("frequency", self.frequency)
+        print("omega", omega)
+        mu = units._hplanck / (8 * np.pi**2 * omega)  # kg m^2
+        # eq 5
+        mu_prime = (mu * B_av) / (mu + B_av)  # kg m^2
+        print("mu_prime", mu_prime)
+        # eq 6
+        x = np.sqrt(8 * np.pi**3 * mu_prime * kT / (units._hplanck)**2)
+        # filter zeros out and set them to zero
+        log_x = np.log(x, out=np.zeros_like(x, dtype='float64'), where=(x != 0))
+        S_r = R * (1 / 2 + log_x)  # J/(Js)^2
+        S_r *= units.J
+        return S_r
+
+
+    def get_msRRHO_vib_entropy_v_contribution(self, temperature: float) -> float:
+        """msRRHO Vibrational Entropy Contribution from
+        :doi:`10.1039/D1SC00621E`.
+
+        Returns the entropy contribution in eV/K."""
+        
+        qRRHO = self.get_vib_entropy_contribution(temperature)
+        return self._head_gordon_damp(self.frequency) * qRRHO
+    
+    def get_msRRHO_vib_entropy_r_contribution(self, temperature: float) -> float:
+        """Calculates the rotation of a rigid rotor for low frequency modes.
+
+        Equation numbering from :doi:`10.1002/chem.201200497`
+
+        Returns the entropy contribution in eV/K."""
+        S_r = self.get_qRRHO_entropy_r(temperature)
+        # eq 7
+        return (1 - self._head_gordon_damp(self.frequency)) * S_r
+
+    def get_entropy(self, temperature: float,
+                    contributions: bool) -> Union[float, Tuple[float, Dict[str, float]]]:
+        ret = {}
+        ret['S_vib'] = self.get_msRRHO_vib_entropy_v_contribution(temperature)
+        ret['S_rot'] = self.get_msRRHO_vib_entropy_r_contribution(temperature)
+        ret_sum = self.sum_contributions(ret)
+        if contributions:
+            return ret_sum, ret
+        else:
+            return ret_sum
+        
 
 
 class BaseThermoChem(ABC):
@@ -437,14 +550,17 @@ class HarmonicThermo(BaseThermoChem):
         If 'invert', the imaginary frequencies will be multiplied by -i.
     """
 
-    def __init__(self, vib_energies, potentialenergy=0.,
-                 imag_modes_handling='error'):
+    def __init__(self, vib_energies: List[float], potentialenergy: float=0.,
+                 imag_modes_handling: str='error',
+                 modes: List[AbstractMode]=None) -> None:
 
         # Check for imaginary frequencies.
         vib_energies, n_imag = _clean_vib_energies(
             vib_energies, handling=imag_modes_handling
         )
-        super().__init__(vib_energies, modes=[HarmonicMode(energy) for energy in vib_energies])
+        if modes is None:
+            modes = [HarmonicMode(energy) for energy in vib_energies]
+        super().__init__(vib_energies, modes=modes)
 
         self.n_imag = n_imag
 
@@ -553,6 +669,7 @@ class QuasiHarmonicThermo(BaseThermoChem):
     """
 
     def __init__(self, vib_energies, potentialenergy=0.,
+                 modes: List[AbstractMode]=None,
                  imag_modes_handling='raise',
                  raise_to=100 * units.invcm) -> None:
 
@@ -561,11 +678,14 @@ class QuasiHarmonicThermo(BaseThermoChem):
             vib_energies, handling=imag_modes_handling,
             value=raise_to
         )
-        super().__init__(vib_energies)
         self.n_imag = n_imag
         # raise the low frequencies to a certain value
+        self.vib_energies = vib_energies
         if imag_modes_handling == 'raise':
             self.vib_energies = self._raise(raise_to)
+        if modes is None:
+            modes = [HarmonicMode(energy) for energy in vib_energies]
+        super().__init__(self.vib_energies, modes=modes)
         self.potentialenergy = potentialenergy
 
 
@@ -680,18 +800,34 @@ class MSRRHOThermo(QuasiHarmonicThermo):
 
     def __init__(self, vib_energies, atoms, potentialenergy=0.,
                  tau=35, nu_scal=1.0,
-                 vibrational=False) -> None:
+                 vibrational=False,
+                 modes: List[AbstractMode]=None) -> None:
         
-        super().__init__(vib_energies, potentialenergy=potentialenergy,
-                            imag_modes_handling='invert')
-        # scale the frequencies (i.e. energies) before passing them on
-        self.nu_scal = nu_scal
-        self.vib_energies = np.multiply(self.vib_energies, self.nu_scal)
-        # perhaps later we can pass the scaling to the class above
+        
+        inertia = np.mean(atoms.get_moments_of_inertia())
+        print("atoms.get_moments_of_inertia()", atoms.get_moments_of_inertia())
+        print("mean inertia", inertia)
         self.atoms = atoms
-        self.tau = tau * units._c
-        self.alpha = 4  # from paper 10.1002/chem.201200497
+        
+        # clean the energies
+        vib_energies, n_imag = _clean_vib_energies(
+                                vib_energies, handling='invert')
+        self.nu_scal = nu_scal
+        # scale the frequencies (i.e. energies) before passing them on
+        vib_energies = np.multiply(vib_energies, nu_scal)
+
+        if modes is None:
+            modes = [RRHOMode(energy, inertia,
+                            tau=tau) for energy in vib_energies]
+            
+        super().__init__(vib_energies,
+                            potentialenergy=potentialenergy,
+                            imag_modes_handling='error',
+                            modes=modes)
         self.vibrational = vibrational
+        #remove
+        self.alpha = 4
+        self.tau = tau * units._c
 
 
     def get_entropy(self, temperature, verbose=True) -> float:
@@ -706,25 +842,25 @@ class MSRRHOThermo(QuasiHarmonicThermo):
         Returns:
         float : The entropy in eV/K.
         """
-        # overwrite verbosity to avoid double printing
-        S = self.get_msRRHO_vib_entropy_v_contribution(temperature)
+        self.verbose = verbose
         vprint = self._vprint
         fmt = '%-15s%13.7f eV/K%13.3f eV'
         vprint('Entropy components at T = %.2f K:' % temperature)
         vprint('=' * 49)
         vprint('%15s%13s     %13s' % ('', 'S', 'T*S'))
-        vprint(fmt % ('S_vib', S, S * temperature))
 
-        S_r_damp = self.get_msRRHO_vib_entropy_r_contribution(temperature)
-        S += S_r_damp
-        vprint(fmt % ('S_rot', S_r_damp, S_r_damp * temperature))
+        S, contribs = zip(*[mode.get_entropy(
+            temperature, contributions=True) for mode in self.modes])
+        print("S", S)
+        S = np.sum(S)
+        print("S", S)
 
+        self.print_contributions(self.combine_contributions(contribs), verbose)
         vprint('-' * 49)
-        vprint(fmt % ('S_tot', S, S * temperature))
+        vprint(fmt % ('S', S, S * temperature))
         vprint('=' * 49)
-        return S
-    
 
+        return S
 
     def get_internal_energy(self, temperature, verbose=True) -> float:
         """Calculate the msRRHO energy (eV) at a specified temperature (K)
