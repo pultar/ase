@@ -355,93 +355,6 @@ class BaseThermoChem(ABC):
         if self.verbose:
             sys.stdout.write(text + os.linesep)
 
-    def _head_gordon_damp(self, freq) -> float:
-        """Head-Gordon damping function.
-
-        Equation 8 from :doi:`10.1002/chem.201200497`
-        
-        Parameters
-        ----------
-        freq : float
-            The frequency in the same unit as self.tau.
-
-        Returns
-        -------
-        float
-        """
-        ret = 1 / (1 + (self.tau / freq)**self.alpha)
-
-        return ret
-
-    def get_qRRHO_entropy_contribution(self, temperature) -> float:
-        """qRRHO Vibrational Entropy Contribution from
-        :doi:`10.1002/chem.201200497`.
-
-        Uses tau to switch between S_v and S_r.
-
-        Returns the entropy in eV/K."""
-        qRRHO_vib = self.get_vib_entropy_contribution(temperature, return_list=True)
-        qRRHO_rot = self.calc_qRRHO_entropies_r(temperature)
-        assert len(qRRHO_vib) == len(qRRHO_rot), "qRRHO_vib and qRRHO_rot do not match"
-        assert len(qRRHO_vib) == len(self.vib_energies), "qRRHO and frequencies do not match"
-        S = 0.
-        #simply use a cutoff to switch between S_v and S_r
-        for n, freq in enumerate(self.frequencies):
-            if freq < self.tau:
-                S += qRRHO_rot[n]
-            else:
-                S += qRRHO_vib[n]
-        return S
-
-    def calc_qRRHO_entropies_r(self, temperature) -> np.array:
-        """Calculates the rotation of a rigid rotor for low frequency modes.
-
-        Equation numbering from :doi:`10.1002/chem.201200497`
-
-        Returns the entropy contribution in eV/K."""
-        # rotational entropy
-        S_r_damp = 0.
-        kT = units._k * temperature
-        R = units._k
-        inertias = (self.atoms.get_moments_of_inertia() /
-                    (units.kg * units.m**2))  # from amu/A^2 to kg m^2
-        B_av = np.mean(inertias)
-
-        # eq 4
-        omega = 2 * np.pi * (units._c * self.frequencies * 1e2)   # s^-1
-        mu = units._hplanck / (8 * np.pi**2 * omega)  # kg m^2
-        # eq 5
-        mu_prime = (mu * B_av) / (mu + B_av)  # kg m^2
-        # eq 6
-        x = np.sqrt(8 * np.pi**3 * mu_prime * kT / (units._hplanck)**2)
-        # filter zeros out and set them to zero
-        log_x = np.log(x, out=np.zeros_like(x, dtype='float64'), where=(x != 0))
-        S_r_components = R * (1 / 2 + log_x)  # J/(Js)^2
-        S_r_components *= units.J
-        return S_r_components
-
-
-    def get_msRRHO_vib_entropy_v_contribution(self, temperature) -> float:
-        """msRRHO Vibrational Entropy Contribution from
-        :doi:`10.1039/D1SC00621E`.
-
-        Returns the entropy contribution in eV/K."""
-        
-        qRRHO = self.get_vib_entropy_contribution(temperature, return_list=True)
-        assert len(qRRHO) == len(self.vib_energies), "qRRHO and frequencies do not match"
-        return (self._head_gordon_damp(self.frequencies) * qRRHO).sum()
-    
-    def get_msRRHO_vib_entropy_r_contribution(self, temperature) -> float:
-        """Calculates the rotation of a rigid rotor for low frequency modes.
-
-        Equation numbering from :doi:`10.1002/chem.201200497`
-
-        Returns the entropy contribution in eV/K."""
-        S_r_components = self.calc_qRRHO_entropies_r(temperature)
-        assert len(S_r_components) == len(self.vib_energies), "qRRHO and frequencies do not match"
-        # eq 7
-        return ((1 - self._head_gordon_damp(self.frequencies)) * S_r_components).sum()
-    
     def get_damped_vib_energy_contribution(self, temperature) -> float:
         assert False, "Not implemented yet"
         E_v_damp = 0.
@@ -514,10 +427,6 @@ class BaseThermoChem(ABC):
             ret['S_v'] = S_v
 
         return S, ret
-
-
-    def _raise(self, raise_to) -> List[float]:
-        return [raise_to if x < raise_to else x for x in self.vib_energies]
 
 
 class HarmonicThermo(BaseThermoChem):
@@ -673,6 +582,10 @@ class QuasiHarmonicThermo(HarmonicThermo):
 
     """
 
+    @staticmethod
+    def _raise(input: List[float], raise_to: float) -> List[float]:
+        return [raise_to if x < raise_to else x for x in input]
+    
     def __init__(self, vib_energies: List[float], potentialenergy: float=0.,
                  imag_modes_handling: str='error',
                  modes: List[AbstractMode]=None,
@@ -684,8 +597,7 @@ class QuasiHarmonicThermo(HarmonicThermo):
             value=raise_to
         )
         # raise the low frequencies to a certain value
-        self.vib_energies = vib_energies
-        self.vib_energies = self._raise(raise_to)
+        self.vib_energies = self._raise(vib_energies, raise_to)
         if modes is None:
             modes = [HarmonicMode(energy) for energy in self.vib_energies]
         super().__init__(self.vib_energies, potentialenergy=potentialenergy,
