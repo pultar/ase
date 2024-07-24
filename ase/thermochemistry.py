@@ -13,6 +13,9 @@ import numpy as np
 from ase import units, Atoms
 
 
+_IMAG_MODES_OPTIONS = Literal['remove', 'error', 'invert', 'raise']
+
+
 class AbstractMode(ABC):
     """Abstract base class for mode objects."""
 
@@ -243,7 +246,7 @@ class BaseThermoChem(ABC):
         return self._imag_modes_handling
     
     @imag_modes_handling.setter
-    def imag_modes_handling(self, value):
+    def imag_modes_handling(self, value: _IMAG_MODES_OPTIONS):
         """For backwards compatibility, raise a deprecation warning."""
         warn("The imag_modes_handling attribute is deprecated and will be removed in a future release. "
              "Please use the raise_to attribute instead.", DeprecationWarning)
@@ -461,7 +464,7 @@ class HarmonicThermo(BaseThermoChem):
     """
 
     def __init__(self, vib_energies: List[float], potentialenergy: float=0.,
-                 imag_modes_handling: str='error',
+                 imag_modes_handling: _IMAG_MODES_OPTIONS='error',
                  raise_to: float=None,
                  modes: List[AbstractMode]=None) -> None:
 
@@ -587,7 +590,7 @@ class QuasiHarmonicThermo(HarmonicThermo):
         return [raise_to if x < raise_to else x for x in input]
     
     def __init__(self, vib_energies: List[float], potentialenergy: float=0.,
-                 imag_modes_handling: str='error',
+                 imag_modes_handling: _IMAG_MODES_OPTIONS='error',
                  modes: List[AbstractMode]=None,
                  raise_to=100 * units.invcm) -> None:
 
@@ -794,7 +797,7 @@ class HinderedThermo(BaseThermoChem):
     def __init__(self, vib_energies, trans_barrier_energy, rot_barrier_energy,
                  sitedensity, rotationalminima, potentialenergy=0.,
                  mass=None, inertia=None, atoms=None, symmetrynumber=1,
-                 imag_modes_handling='error'):
+                 imag_modes_handling: _IMAG_MODES_OPTIONS='error'):
 
         self.trans_barrier_energy = trans_barrier_energy * units._e
         self.rot_barrier_energy = rot_barrier_energy * units._e
@@ -1042,7 +1045,8 @@ class IdealGasThermo(BaseThermoChem):
 
     def __init__(self, vib_energies, geometry, potentialenergy=0.,
                  atoms=None, symmetrynumber=None, spin=None, natoms=None,
-                 imag_modes_handling='error'):
+                 imag_modes_handling: _IMAG_MODES_OPTIONS='error',
+                 modes: List[AbstractMode]=None) -> None:
         self.potentialenergy = potentialenergy
         self.geometry = geometry
         self.atoms = atoms
@@ -1346,8 +1350,7 @@ class CrystalThermo(BaseThermoChem):
         vprint('=' * 23)
         return F
 
-
-def _clean_vib_energies(vib_energies, handling='error',
+def _clean_vib_energies(vib_energies, handling: _IMAG_MODES_OPTIONS='error',
                         value=None) -> Tuple[List[float], int]:
     """Checks and deal with the presence of imaginary vibrational modes
 
