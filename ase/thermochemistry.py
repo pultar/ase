@@ -657,20 +657,22 @@ class QuasiHarmonicThermo(BaseThermoChem):
     imag_modes_handling : string
         If 'remove', any imaginary frequencies will be removed in the
         calculation of the thermochemical properties.
-        If 'error', an error will be raised if any imaginary
+        If 'error' (default), an error will be raised if any imaginary
         frequencies are present.
         If 'invert', the imaginary frequencies will be multiplied by -i.
-        If 'raise' (default), the imaginary frequencies will be raised to a
+        If 'raise', the imaginary frequencies will be raised to a
         certain value, specified by the *raise_to* keyword.
     raise_to : float
-        The value to which imaginary frequencies will be raised if
-        *imag_modes_handling* is 'raise'. Defaults to :math:`100cm^{-1}`.
+        The value to which all frequencies smaller than this value will be
+        raised. If *imag_modes_handling* is 'raise' this also applies to
+        imaginary frequencies. Unit is eV. Defaults to
+        :math:`100cm^{-1} = 0.012398 eV`. 
 
     """
 
     def __init__(self, vib_energies, potentialenergy=0.,
                  modes: List[AbstractMode]=None,
-                 imag_modes_handling='raise',
+                 imag_modes_handling='error',
                  raise_to=100 * units.invcm) -> None:
 
         # Raise all imaginary frequencies
@@ -681,8 +683,7 @@ class QuasiHarmonicThermo(BaseThermoChem):
         self.n_imag = n_imag
         # raise the low frequencies to a certain value
         self.vib_energies = vib_energies
-        if imag_modes_handling == 'raise':
-            self.vib_energies = self._raise(raise_to)
+        self.vib_energies = self._raise(raise_to)
         if modes is None:
             modes = [HarmonicMode(energy) for energy in vib_energies]
         super().__init__(self.vib_energies, modes=modes)
@@ -823,7 +824,8 @@ class MSRRHOThermo(QuasiHarmonicThermo):
         super().__init__(vib_energies,
                             potentialenergy=potentialenergy,
                             imag_modes_handling='error',
-                            modes=modes)
+                            modes=modes,
+                            raise_to=0.0)
         self.vibrational = vibrational
         #remove
         self.alpha = 4
