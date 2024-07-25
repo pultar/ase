@@ -74,3 +74,37 @@ exclude_also = [
     'if TYPE_CHECKING:',
     'if __name__ == .__main__.:'
 ]
+
+[tool.ruff]
+line-length = 80
+exclude = ["./build/", "./dist", "./doc/build"]
+src = ["ase"]
+
+[tool.ruff.format]
+quote-style = "single"
+skip-magic-trailing-comma = false
+
+[tool.ruff.lint]
+preview = true  # necessary to activate many pycodestyle rules
+select = [
+    "F",  # Pyflakes
+    "E",  # pycodestyle
+    "W",  # pycodestyle
+    "I"   # isort
+]
+ignore = [
+    "F841",  # unused-variable
+    "E741",  # ambiguous-variable-name
+    "W505",  # doc-line-too-long
+]
+
+[tool.ruff.lint.pycodestyle]
+max-line-length = 80
+max-doc-length = 80
+
+[tool.ruff.lint.pydocstyle]
+convention = "numpy"
+
+[tool.ruff.lint.isort]
+known-first-party = ["ase"]
+

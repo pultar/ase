@@ -6,9 +6,14 @@ from ase.build import bulk, molecule
 from ase.calculators.emt import EMT
 from ase.optimize import QuasiNewton
 from ase.phonons import Phonons
-from ase.thermochemistry import (CrystalThermo, HarmonicThermo, HinderedThermo,
-                                 IdealGasThermo, QuasiHarmonicThermo,
-                                 MSRRHOThermo)
+from ase.thermochemistry import (
+    CrystalThermo,
+    HarmonicThermo,
+    HinderedThermo,
+    IdealGasThermo,
+    QuasiHarmonicThermo,
+    MSRRHOThermo
+)
 from ase.vibrations import Vibrations
 
 
