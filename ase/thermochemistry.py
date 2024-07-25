@@ -101,7 +101,7 @@ class RRHOMode(HarmonicMode):
         :math:`\\tau` in :doi:`10.1039/D1SC00621E`.
         Values close or equal to 0 will result in the standard harmonic
         approximation. Defaults to :math:`35cm^{-1}`.
-    vibrational : bool
+    internal_energy_treatment : bool
         Extend the msRRHO treatement to the internal thermal energy.
         If False, only the entropy contribution as in Grimmmes paper is
         modified according to the RRHO scheme. If True, the approach of
@@ -112,14 +112,14 @@ class RRHOMode(HarmonicMode):
     def __init__(self, energy: float,
                 mean_inertia: float,
                 tau: float=35.0,
-                vibrational: bool=False) -> None:
+                internal_energy_treatment: bool=False) -> None:
         if np.iscomplex(energy):
             raise ValueError("Imaginary frequencies are not allowed in RRHO mode.")
         super().__init__(energy)
         self._mean_inertia = mean_inertia
         self._tau = tau
         self._alpha = 4  # from paper 10.1002/chem.201200497
-        self.vibrational = vibrational 
+        self.internal_energy_treatment = internal_energy_treatment 
 
 
     @property
@@ -243,13 +243,13 @@ class RRHOMode(HarmonicMode):
         """Returns the internal energy in the msRRHO approximation at a
         specified temperature (K).
         
-        If self.vibrational is True, the approach of Otlyotov and Minenkov
+        If self.internal_energy_treatment is True, the approach of Otlyotov and Minenkov
         :doi:`10.1002/jcc.27129` is used. Otherwise, the approach of
         Grimme :doi:`10.1002/chem.201200497` is used.
         """
-        if self.vibrational:
+        if self.internal_energy_treatment:
             # Otlyotov and Minenkov approach with damping between vibrational and rotational
-            # contributions to the vibrational internal energy
+            # contributions to the internal energy
             ret = {}
             ret['ZPE'] = self.get_ZPE_correction()
             ret['_dU_vib_v'] = self.get_rrho_internal_energy_v_contribution(temperature)
@@ -271,7 +271,7 @@ class BaseThermoChem(ABC):
     """Abstract base class containing common methods used in thermochemistry
     calculations."""
 
-    def __init__(self, vib_energies: np.ndarray, atoms: Optional[Atoms]=None,
+    def __init__(self, vib_energies: List[complex], atoms: Optional[Atoms]=None,
                  modes: Optional[List[Type[AbstractMode]]]=None) -> None:
         self._vib_energies = vib_energies
         if atoms:
@@ -315,7 +315,7 @@ class BaseThermoChem(ABC):
         return self._vib_energies
     
     @vib_energies.setter
-    def vib_energies(self, value):
+    def vib_energies(self, value: List[complex]):
         """For backwards compatibility, raise a deprecation warning."""
         warn("The vib_energies attribute is deprecated and will be removed in a future release. "
              "Please use the modes attribute instead.", DeprecationWarning)
@@ -519,7 +519,7 @@ class HarmonicThermo(BaseThermoChem):
         raised, if *imag_modes_handling* is 'raise'.
     """
 
-    def __init__(self, vib_energies: List[float], potentialenergy: float=0.,
+    def __init__(self, vib_energies: List[complex], potentialenergy: float=0.,
                  imag_modes_handling: _IMAG_MODES_OPTIONS='error',
                  raise_to: float=None,
                  modes: List[AbstractMode]=None) -> None:
@@ -644,7 +644,7 @@ class QuasiHarmonicThermo(HarmonicThermo):
     def _raise(input: List[float], raise_to: float) -> List[float]:
         return [raise_to if x < raise_to else x for x in input]
     
-    def __init__(self, vib_energies: List[float], potentialenergy: float=0.,
+    def __init__(self, vib_energies: List[complex], potentialenergy: float=0.,
                  imag_modes_handling: _IMAG_MODES_OPTIONS='error',
                  modes: List[AbstractMode]=None,
                  raise_to=100 * units.invcm) -> None:
@@ -685,19 +685,19 @@ class MSRRHOThermo(QuasiHarmonicThermo):
         for values corresponding to your level of theory.
         Note that for `\\nu_{scal}=1.0` this method is equivalent to
         the quasi-RRHO method in :doi:`10.1002/chem.201200497`.
-    vibrational : bool
-        Extend the msRRHO treatement to the vibrational component of
-        the internal thermal energy. If False, only the rotational
-        contribution as in Grimmmes paper is considered. If true, the
+    internal_energy_treatment : bool
+        Extend the msRRHO treatement to the internal energy. If False, only 
+        the entropy contribution as in Grimmmes paper is considered. If true, the
         approach of Otlyotov and Minenkov :doi:`10.1002/jcc.27129` is used.
 
     We enforce treating imaginary modes as Grimme suggests (converting 
     them to real by multiplying them with :math:`-i`).
     """
 
-    def __init__(self, vib_energies, atoms, potentialenergy=0.,
-                 tau=35, nu_scal=1.0,
-                 vibrational=False,
+    def __init__(self, vib_energies: List[complex], atoms: Atoms,
+                 potentialenergy: float=0.,
+                 tau: float=35., nu_scal: float=1.0,
+                 internal_energy_treatment: bool=False,
                  modes: List[AbstractMode]=None) -> None:
         
         
@@ -713,7 +713,8 @@ class MSRRHOThermo(QuasiHarmonicThermo):
 
         if modes is None:
             modes = [RRHOMode(energy, inertia,
-                            tau=tau, vibrational=vibrational
+                            tau=tau,
+                            internal_energy_treatment=internal_energy_treatment
                             ) for energy in vib_energies]
             
         super().__init__(vib_energies,
@@ -721,7 +722,7 @@ class MSRRHOThermo(QuasiHarmonicThermo):
                             imag_modes_handling='error',
                             modes=modes,
                             raise_to=0.0)
-        self.vibrational = vibrational
+        self.internal_energy_treatment = internal_energy_treatment
 
 
 
