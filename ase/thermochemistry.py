@@ -236,8 +236,8 @@ class BaseThermoChem(ABC):
     @vib_energies.setter
     def vib_energies(self, value):
         """For backwards compatibility, raise a deprecation warning."""
-        #warn("The vib_energies attribute is deprecated and will be removed in a future release. "
-        #     "Please use the modes attribute instead.", DeprecationWarning)
+        warn("The vib_energies attribute is deprecated and will be removed in a future release. "
+             "Please use the modes attribute instead.", DeprecationWarning)
         self._vib_energies = value
 
     @property
@@ -600,7 +600,7 @@ class QuasiHarmonicThermo(HarmonicThermo):
             value=raise_to
         )
         # raise the low frequencies to a certain value
-        self.vib_energies = self._raise(vib_energies, raise_to)
+        self._vib_energies = self._raise(vib_energies, raise_to)
         if modes is None:
             modes = [HarmonicMode(energy) for energy in self.vib_energies]
         super().__init__(self.vib_energies, potentialenergy=potentialenergy,
