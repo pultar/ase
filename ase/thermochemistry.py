@@ -15,17 +15,19 @@ from ase import units, Atoms
 
 _IMAG_MODES_OPTIONS = Literal['remove', 'error', 'invert', 'raise']
 
+def _sum_contributions(contrib_dicts: List[Dict[str, float]]) -> float:
+    """Combine a Dict of floats to their sum.
+    
+    Ommits keys starting with an underscore.
+    """
+    return np.sum([ value for key, value in contrib_dicts.items() if not key.startswith('_')])
+
 
 class AbstractMode(ABC):
     """Abstract base class for mode objects."""
 
     def __init__(self, energy: float) -> None:
         self.energy = energy
-
-    @staticmethod
-    def sum_contributions(contrib_dicts: List[Dict[str, float]]) -> float:
-        """Combine a Dict of floats to their sum."""
-        return np.sum([ value for key, value in contrib_dicts.items() ])
 
     @abstractmethod
     def get_internal_energy(self, temperature: float, contributions: bool) -> float:
@@ -66,7 +68,7 @@ class HarmonicMode(AbstractMode):
         ret = {}
         ret['ZPE'] = self.get_ZPE_correction()
         ret['dU_v'] = self.get_vib_energy_contribution(temperature)
-        ret_sum = self.sum_contributions(ret)
+        ret_sum = _sum_contributions(ret)
 
         if contributions:
             return ret_sum, ret
@@ -99,17 +101,25 @@ class RRHOMode(HarmonicMode):
         :math:`\\tau` in :doi:`10.1039/D1SC00621E`.
         Values close or equal to 0 will result in the standard harmonic
         approximation. Defaults to :math:`35cm^{-1}`.
+    vibrational : bool
+        Extend the msRRHO treatement to the internal thermal energy.
+        If False, only the entropy contribution as in Grimmmes paper is
+        modified according to the RRHO scheme. If True, the approach of
+        Otlyotov and Minenkov :doi:`10.1002/jcc.27129` is used to modify
+        the internal energy contribution.
     """
 
     def __init__(self, energy: float,
                 mean_inertia: float,
-                tau: float=35.0) -> None:
+                tau: float=35.0,
+                vibrational: bool=False) -> None:
         if np.iscomplex(energy):
             raise ValueError("Imaginary frequencies are not allowed in RRHO mode.")
         super().__init__(energy)
         self._mean_inertia = mean_inertia
-        self._tau = tau * units._c
-        self.alpha = 4  # from paper 10.1002/chem.201200497
+        self._tau = tau
+        self._alpha = 4  # from paper 10.1002/chem.201200497
+        self.vibrational = vibrational 
 
 
     @property
@@ -130,7 +140,19 @@ class RRHOMode(HarmonicMode):
         -------
         float
         """
-        return 1 / (1 + (self._tau / freq)**self.alpha)
+        return 1 / (1 + (self._tau / freq)**self._alpha)
+    
+    def _apply_head_gordon_damp(self, freq: float,
+                                large_part: float,
+                                small_part: float) -> float:
+        """Apply the head-gordon damping scheme to two contributions.
+        
+        Equation 7 from :doi:`10.1002/chem.201200497`
+        
+        Returns the damped sum of the two contributions."""
+        part_one = self._head_gordon_damp(freq) * large_part
+        part_two = (1 - self._head_gordon_damp(freq)) * small_part
+        return part_one + part_two
     
 
     def get_qRRHO_entropy_r(self, temperature) -> np.array:
@@ -179,14 +201,70 @@ class RRHOMode(HarmonicMode):
     def get_entropy(self, temperature: float,
                     contributions: bool) -> Union[float, Tuple[float, Dict[str, float]]]:
         ret = {}
-        ret['S_vib'] = self.get_msRRHO_vib_entropy_v_contribution(temperature)
-        ret['S_rot'] = self.get_msRRHO_vib_entropy_r_contribution(temperature)
-        ret_sum = self.sum_contributions(ret)
+        ret['_S_vib_v'] = self.get_vib_entropy_contribution(temperature)
+        ret['_S_vib_r'] = self.get_qRRHO_entropy_r(temperature)
+        ret['S_vib_damped'] = self._apply_head_gordon_damp(self.energy,
+                                ret['_S_vib_v'], ret['_S_vib_r'])
         if contributions:
-            return ret_sum, ret
+            return ret['S_vib_damped'], ret
         else:
-            return ret_sum
+            return ret['S_vib_damped']
+    
+    def get_rrho_internal_energy_v_contribution(self, temperature: float) -> float:
+        """RRHO Vibrational Internal Energy Contribution from
+        :doi:`10.1002/jcc.27129`.
+
+        Returns the internal energy contribution in eV."""
+        # equation numbering from :doi:`10.1002/jcc.27129`
+        # eq 4
+        kT = units.kB * temperature
+        theta = units._hplanck * self.energy / units.kB
+        R = units._k * units._Nav
         
+        E_v = 0.5 + 1 / (np.exp(theta / temperature) - 1)
+        E_v *= theta * R
+        return E_v
+    
+    @staticmethod
+    def get_rrho_internal_energy_r_contribution(temperature: float) -> float:
+        """Calculates the rotation of a rigid rotor contribution.
+
+        Equation numbering from :doi:`10.1002/jcc.27129`
+
+        Returns the internal energy contribution in eV."""
+        # eq 5
+        R = units._k * units._Nav
+        E_r = R * temperature / 2
+        return E_r
+
+
+    def get_internal_energy(self, temperature: float,
+        contributions: bool) -> Union[float, Tuple[float, Dict[str, float]]]:
+        """Returns the internal energy in the msRRHO approximation at a
+        specified temperature (K).
+        
+        If self.vibrational is True, the approach of Otlyotov and Minenkov
+        :doi:`10.1002/jcc.27129` is used. Otherwise, the approach of
+        Grimme :doi:`10.1002/chem.201200497` is used.
+        """
+        if self.vibrational:
+            # Otlyotov and Minenkov approach with damping between vibrational and rotational
+            # contributions to the vibrational internal energy
+            ret = {}
+            ret['ZPE'] = self.get_ZPE_correction()
+            ret['_dU_vib_v'] = self.get_rrho_internal_energy_v_contribution(temperature)
+            ret['_dU_vib_r'] = self.get_rrho_internal_energy_r_contribution(temperature)
+            ret['dU_vib_damped'] = self._apply_head_gordon_damp(self.energy,
+                                    ret['_dU_vib_v'], ret['_dU_vib_r'])
+            ret_sum = _sum_contributions(ret)
+            if contributions:
+                return ret_sum, ret
+            else:
+                return ret_sum
+        else:
+            # Grimme uses the Harmonic approach for the internal energy
+            return super().get_internal_energy(temperature, contributions)
+
 
 
 class BaseThermoChem(ABC):
@@ -218,6 +296,9 @@ class BaseThermoChem(ABC):
         if verbose:
             fmt = "{:<15s}{:13.3f} eV"
             for key, value in contributions.items():
+                # subvalues start with _
+                if key.startswith('_'):
+                    key.replace('_', '... ')
                 self._vprint(fmt.format(key, value))
 
     @abstractmethod
@@ -252,11 +333,6 @@ class BaseThermoChem(ABC):
              "Please use the raise_to attribute instead.", DeprecationWarning)
         self._imag_modes_handling = value
 
-
-    @property
-    def frequencies(self):
-        """Returns the vibrational frequencies in cm^-1."""
-        return np.array(self.vib_energies) / units.invcm
     
     def get_ZPE_correction(self):
         """Returns the zero-point vibrational energy correction in eV."""
@@ -357,26 +433,6 @@ class BaseThermoChem(ABC):
         """Print output if verbose flag True."""
         if self.verbose:
             sys.stdout.write(text + os.linesep)
-
-    def get_damped_vib_energy_contribution(self, temperature) -> float:
-        assert False, "Not implemented yet"
-        E_v_damp = 0.
-        R = units._k * units._Nav
-
-        for n, freq in enumerate(self.frequencies):
-            x = units._hplanck * freq * 100 / units._k
-            comp = R * x * ( 0.5 + 1 / ( np.exp(x / temperature) - 1 ) )
-            E_v_damp += self._head_gordon_damp(freq) * comp
-        return E_v_damp
-    
-    def get_damped_free_rotor_energy_contribution(self, temperature) -> float:
-        assert False, "Not implemented yet"
-        E_r_damp = 0.
-        R = units._k * units._Nav
-        for n, freq in enumerate(self.frequencies):
-            comp = 0.5 * R * temperature
-            E_r_damp += 1 - self._head_gordon_damp(freq) * comp
-        return E_r_damp
     
     def get_ideal_entropy(self, temperature, translation=False,
                     vibration=False, rotation=False, geometry=None,
@@ -506,8 +562,7 @@ class HarmonicThermo(BaseThermoChem):
         return U
 
     def get_entropy(self, temperature, verbose=True):
-        """Returns the entropy, in eV/K, in the harmonic approximation
-        at a specified temperature (K)."""
+        """Returns the entropy, in eV/ at a specified temperature (K)."""
 
         self.verbose = verbose
         vprint = self._vprint
@@ -658,7 +713,8 @@ class MSRRHOThermo(QuasiHarmonicThermo):
 
         if modes is None:
             modes = [RRHOMode(energy, inertia,
-                            tau=tau) for energy in vib_energies]
+                            tau=tau, vibrational=vibrational
+                            ) for energy in vib_energies]
             
         super().__init__(vib_energies,
                             potentialenergy=potentialenergy,
@@ -667,74 +723,6 @@ class MSRRHOThermo(QuasiHarmonicThermo):
                             raise_to=0.0)
         self.vibrational = vibrational
 
-
-    def get_entropy(self, temperature, verbose=True) -> float:
-        """Calculate the msRRHO entropy (eV/K) at a specified temperature (K)
-
-        Inputs:
-        temperature : float
-            The temperature in Kelvin.
-        verbose : bool
-            If True, print the entropy components.
-
-        Returns:
-        float : The entropy in eV/K.
-        """
-        self.verbose = verbose
-        vprint = self._vprint
-        fmt = '%-15s%13.7f eV/K%13.3f eV'
-        vprint('Entropy components at T = %.2f K:' % temperature)
-        vprint('=' * 49)
-        vprint('%15s%13s     %13s' % ('', 'S', 'T*S'))
-
-        S, contribs = zip(*[mode.get_entropy(
-            temperature, contributions=True) for mode in self.modes])
-        S = np.sum(S)
-
-        self.print_contributions(self.combine_contributions(contribs), verbose)
-        vprint('-' * 49)
-        vprint(fmt % ('S', S, S * temperature))
-        vprint('=' * 49)
-
-        return S
-
-    def get_internal_energy(self, temperature, verbose=True) -> float:
-        """Calculate the msRRHO energy (eV) at a specified temperature (K)
-
-        Inputs:
-        temperature : float
-            The temperature in Kelvin.
-        verbose : bool
-            If True, print the energy components.
-        Returns:
-        float : The energy in eV.
-        """
-
-        U = super().get_internal_energy(temperature, verbose=verbose)
-        
-        if self.vibrational:
-            assert False, "Not implemented yet"
-            # enable Otlyotov and Minenkov approach
-            E_trans = 2.5 * units._k * units._Nav * temperature 
-            vprint(fmt % ('E_trans', E_trans))
-            U += E_trans
-
-            E_rot = 1.5 * units._k * units._Nav * temperature 
-            vprint(fmt % ('E_rot', E_rot))
-            U += E_rot
-            E_v_damp = self.get_damped_vib_energy_contribution(temperature)
-            vprint(fmt % ('E_vib_damp', E_v_damp))
-            U += E_v_damp
-
-            E_r_damp = self.get_damped_free_rotor_energy_contribution(temperature)
-            vprint(fmt % ('E_rot_damp', E_r_damp))
-            U += E_r_damp
-
-            E_RT = units._k * units._Nav * temperature 
-            vprint(fmt % ('Thermal energy', E_RT))
-            U += E_RT
-        
-        return U
 
 
 
