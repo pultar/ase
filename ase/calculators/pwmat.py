@@ -4,11 +4,14 @@ import re
 from copy import deepcopy
 from pathlib import Path
 
-from ase.calculators.genericfileio import (BaseProfile, CalculatorTemplate,
-                                           GenericFileIOCalculator)
+from ase.calculators.genericfileio import (
+    BaseProfile,
+    CalculatorTemplate,
+    GenericFileIOCalculator,
+)
 from ase.io import read, write
-from ase.io.pwmat_namelist.namelist import Namelist_pwmat
 from ase.io.pwmat import write_IN_KPT
+from ase.io.pwmat_namelist.namelist import Namelist_pwmat
 
 
 class PWmatProfile(BaseProfile):
