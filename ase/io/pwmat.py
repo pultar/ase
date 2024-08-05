@@ -1,8 +1,3 @@
-import warnings
-import io
-from typing import List, Dict, Optional, Union
-import numpy as np
-import os
 from ase.atoms import Atoms
 from ase.calculators.singlepoint import SinglePointDFTCalculator
 from ase.constraints import FixAtoms
@@ -12,7 +7,11 @@ from ase.io.espresso import kspacing_to_grid
 from ase.units import create_units
 from ase.utils import reader, writer
 from ase.stress import full_3x3_to_voigt_6_stress
-
+from typing import List, Dict, Optional, Union
+import io
+import numpy as np
+import os
+import warnings
 units = create_units('2018')
 
 _PWmat_Cell = 'Lattice vector (Angstrom)'
@@ -117,11 +116,13 @@ def write_pwmat(fd: io.TextIOWrapper, atoms: Atoms, sort: bool = True,
     fd.write('Position, move_x, move_y, move_z\n')
     for i in range(len(atoms)):
         if i in fix_indices:
-            fd.write('{}	{:18.15f}	{:18.15f}	{:18.15f}  0   0   0\n'.format
-                     (atoms.numbers[i], *atoms.get_scaled_positions()[i]))
+            fd.write(
+                '{}	{:18.15f}	{:18.15f}	{:18.15f}  0   0   0\n'.format(
+                    atoms.numbers[i], *atoms.get_scaled_positions()[i]))
         else:
-            fd.write('{}	{:18.15f}	{:18.15f}	{:18.15f}  1   1   1\n'.format
-                     (atoms.numbers[i], *atoms.get_scaled_positions()[i]))
+            fd.write(
+                '{}	{:18.15f}	{:18.15f}	{:18.15f}  1   1   1\n'.format(
+                    atoms.numbers[i], *atoms.get_scaled_positions()[i]))
     if show_magnetic:
         fd.write('MAGNETIC\n')
         for j in range(len(atoms)):

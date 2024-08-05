@@ -1,8 +1,8 @@
-import os
-import warnings
 from ase.io.pwmat_namelist.keys import pwmat_keys
 from collections import UserDict
 from collections.abc import MutableMapping
+import os
+import warnings
 
 
 class Namelist_pwmat(UserDict):
@@ -31,7 +31,7 @@ class Namelist_pwmat(UserDict):
                 etot_input.append('{}   {}\n'.format(*value))
             elif key != 'PARALLEL' and isinstance(value, list):
                 for n, v in enumerate(value):
-                    etot_input.append(f'{key}{n+1} = {v}\n')
+                    etot_input.append(f'{key}{n + 1} = {v}\n')
             else:
                 etot_input.append(f'{key} = {value}\n')
         if list_form:

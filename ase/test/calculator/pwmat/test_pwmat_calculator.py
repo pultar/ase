@@ -1,6 +1,6 @@
-import pytest
 from ase.calculators.pwmat import PWmat, PWmatProfile
 from ase.build import bulk
+import pytest
 
 
 @pytest.mark.skip(reason='1. Users may not compile PWmat \
