@@ -1,8 +1,9 @@
-from ase.io.pwmat_namelist.keys import pwmat_keys
-from collections import UserDict
-from collections.abc import MutableMapping
 import os
 import warnings
+from collections import UserDict
+from collections.abc import MutableMapping
+
+from ase.io.pwmat_namelist.keys import pwmat_keys
 
 
 class Namelist_pwmat(UserDict):

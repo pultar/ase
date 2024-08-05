@@ -1,17 +1,20 @@
+import io
+import os
+import warnings
+from typing import Dict, List, Optional, Union
+
+import numpy as np
+
 from ase.atoms import Atoms
 from ase.calculators.singlepoint import SinglePointDFTCalculator
 from ase.constraints import FixAtoms
 from ase.data import chemical_symbols
-from ase.io.pwmat_namelist.namelist import Namelist_pwmat
 from ase.io.espresso import kspacing_to_grid
+from ase.io.pwmat_namelist.namelist import Namelist_pwmat
+from ase.stress import full_3x3_to_voigt_6_stress
 from ase.units import create_units
 from ase.utils import reader, writer
-from ase.stress import full_3x3_to_voigt_6_stress
-from typing import List, Dict, Optional, Union
-import io
-import numpy as np
-import os
-import warnings
+
 units = create_units('2018')
 
 _PWmat_Cell = 'Lattice vector (Angstrom)'
