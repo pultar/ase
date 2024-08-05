@@ -23,7 +23,8 @@ _PWmat_End = '----------'
 
 
 @reader
-def read_pwmat(fd: io.TextIOWrapper, ignore_constraints: bool = False) -> Atoms:
+def read_pwmat(fd: io.TextIOWrapper,
+               ignore_constraints: bool = False) -> Atoms:
     """
     Read Atoms object from PWmat atom.config input/output file.
 
@@ -87,7 +88,8 @@ def write_pwmat(fd: io.TextIOWrapper, atoms: Atoms, sort: bool = True,
         atoms (Atoms):
             Input structure
         sort (bool):
-            Sort the atomic indices alphabetically by element. Defaults to True.
+            Sort the atomic indices alphabetically by element.
+            Defaults to True.
         ignore_constraints (bool):
             Ignore all constraints on `atoms`. Defaults to False.
         show_magnetic (bool):
@@ -123,11 +125,13 @@ def write_pwmat(fd: io.TextIOWrapper, atoms: Atoms, sort: bool = True,
     if show_magnetic:
         fd.write('MAGNETIC\n')
         for j in range(len(atoms)):
-            fd.write('{}	{:18.15f}\n'.format(atoms.numbers[j], atoms[j].magmom))
+            fd.write('{}	{:18.15f}\n'.format(atoms.numbers[j],
+                                             atoms[j].magmom))
 
 
 @reader
-def read_pwmat_report(fd: io.TextIOWrapper, index=-1, MOVEMENT=None, QDIV=None):
+def read_pwmat_report(fd: io.TextIOWrapper, index=-1, MOVEMENT=None,
+                      QDIV=None):
     """
     Read potential energy and fermi energy from REPORT.
     Read positions, cells, stresses and forces from MOVEMENT (optional).
@@ -178,12 +182,12 @@ def read_pwmat_report(fd: io.TextIOWrapper, index=-1, MOVEMENT=None, QDIV=None):
             cell = []
             stress: Optional[Union[List[List[float]], None]] = []
             for line in lines[line_start:line_end + 1]:
-                cell.append([float(l) for l in line.split()[:3]])
+                cell.append([float(ll) for ll in line.split()[:3]])
                 if 'stress:' not in line:
                     stress = None
                 else:
                     if stress is not None:
-                        stress.append([float(l) for l in
+                        stress.append([float(ll) for ll in
                                        line.strip().split()[-3:]])
             cells.append(cell)
             if stress is not None:
@@ -198,7 +202,7 @@ def read_pwmat_report(fd: io.TextIOWrapper, index=-1, MOVEMENT=None, QDIV=None):
             symbol = []
             position = []
             for line in lines[line_start:line_end + 1]:
-                position.append([float(l) for l in line.split()[1:4]])
+                position.append([float(ll) for ll in line.split()[1:4]])
                 symbol.append(chemical_symbols[int(line.split()[0])])
             positions.append(position)
             symbols.append(symbol)
@@ -209,7 +213,7 @@ def read_pwmat_report(fd: io.TextIOWrapper, index=-1, MOVEMENT=None, QDIV=None):
             line_end = indexes[_PWmat_End][kk] - 1
             force = []
             for line in lines[line_start:line_end + 1]:
-                force.append([float(l) for l in line.split()[1:4]])
+                force.append([float(ll) for ll in line.split()[1:4]])
             forces.append(force)
     else:
         # cells_none = None
@@ -246,7 +250,8 @@ def read_pwmat_report(fd: io.TextIOWrapper, index=-1, MOVEMENT=None, QDIV=None):
                                             free_energy=energies[-1],
                                             forces=forces_none,
                                             stress=stresses_none,
-                                            magmoms=magmoms, efermi=efermis[-1])
+                                            magmoms=magmoms,
+                                            efermi=efermis[-1])
         except IndexError:
             warnings.warn('No energy value in REPORT file, \
 and a fake value is assigned to energy.')
