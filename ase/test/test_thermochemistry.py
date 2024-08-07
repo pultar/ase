@@ -363,7 +363,8 @@ def msRRHO_thermo(
     )
 
 
-HELMHOLTZ_msRRHO = 0.04011096970389716
+HELMHOLTZ_msRRHO = -0.05665130354741103
+HELMHOLTZ_msRRHO_internal_energy_treatment = -0.057760466601084096
 
 
 def test_msRRHO():
@@ -372,6 +373,12 @@ def test_msRRHO():
     helmholtz = thermo.get_helmholtz_energy(temperature=298.15)
     assert helmholtz == pytest.approx(HELMHOLTZ_msRRHO)
 
+
+def test_msRRHO_enthalpy_treatment():
+    "Test proper functionality of msRRHO enthalpy method"
+    thermo = msRRHO_thermo(atoms=Atoms('H'), tau=35, internal_energy_treatment=True)
+    helmholtz = thermo.get_helmholtz_energy(temperature=298.15)
+    assert helmholtz == pytest.approx(HELMHOLTZ_msRRHO_internal_energy_treatment)
 
 
 def test_msRRHO_converge_to_harmonic():
