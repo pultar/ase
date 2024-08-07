@@ -4,7 +4,7 @@ outputs."""
 import os
 import sys
 from warnings import warn
-from typing import Dict, List, Literal, Optional, Tuple, Type, Union
+from typing import Dict, Sequence, Literal, Optional, Tuple, Type, Union
 from numbers import Real
 from abc import ABC, abstractmethod
 
@@ -18,7 +18,7 @@ _GEOMETRY_OPTIONS = Literal['linear', 'nonlinear', 'monatomic']
 _FLOAT_OR_FLOATWITHDICT = Union[float, Tuple[float, Dict[str, float]]]
 
 
-def _sum_contributions(contrib_dicts: List[Dict[str, float]]) -> float:
+def _sum_contributions(contrib_dicts: Dict[str, float]) -> float:
     """Combine a Dict of floats to their sum.
 
     Ommits keys starting with an underscore.
@@ -37,14 +37,15 @@ class AbstractMode(ABC):
     def get_internal_energy(
             self,
             temperature: float,
-            contributions: bool) -> float:
+            contributions: bool) -> _FLOAT_OR_FLOATWITHDICT:
         raise NotImplementedError
 
     @abstractmethod
-    def get_entropy(self, temperature: float, contributions: bool) -> float:
+    def get_entropy(self, temperature: float,
+                        contributions: bool) -> _FLOAT_OR_FLOATWITHDICT:
         raise NotImplementedError
 
-    def get_ZPE_correction(self):
+    def get_ZPE_correction(self) -> float:
         """Returns the zero-point vibrational energy correction in eV."""
         return 0.5 * self.energy
 
@@ -267,21 +268,24 @@ class BaseThermoChem(ABC):
     calculations."""
 
     def __init__(self,
-                 vib_energies: List[complex],
+                 vib_energies: Sequence[float],
                  atoms: Optional[Atoms] = None,
-                 modes: Optional[List[Type[AbstractMode]]] = None) -> None:
+                 modes: Optional[Sequence[AbstractMode]] = None,
+                 spin: Optional[float] = None) -> None:
         self._vib_energies = vib_energies
         self.referencepressure = 1.0e5  # Pa
         if atoms:
             self.atoms = atoms
         if modes:
             self.modes = modes
+        if spin:
+            self.spin = spin
 
     @staticmethod
     def combine_contributions(
-            contrib_dicts: List[Dict[str, float]]) -> Dict[str, float]:
+            contrib_dicts: Sequence[Dict[str, float]]) -> Dict[str, float]:
         """Combine the contributions from multiple modes."""
-        ret = {}
+        ret: dict[str, float] = {}
         for contrib_dict in contrib_dicts:
             for key, value in contrib_dict.items():
                 if key in ret:
@@ -306,17 +310,18 @@ class BaseThermoChem(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def get_entropy(self, temperature: float, verbose: bool) -> float:
+    def get_entropy(self, temperature: float,
+                    verbose: bool = True) -> float:
         raise NotImplementedError
 
     @property
-    def vib_energies(self) -> List[complex]:
+    def vib_energies(self) -> Sequence[float]:
         """For backwards compatibility.
             Delete the following after some time."""
         return self._vib_energies
 
     @vib_energies.setter
-    def vib_energies(self, value: List[complex]) -> None:
+    def vib_energies(self, value: Sequence[float]) -> None:
         """For backwards compatibility, raise a deprecation warning."""
         warn(
             "The vib_energies attribute is deprecated and will be removed in a"
@@ -361,7 +366,7 @@ class BaseThermoChem(ABC):
 
     @staticmethod
     def get_ideal_rotational_energy(geometry: _GEOMETRY_OPTIONS,
-                                    temperature: Real) -> float:
+                                    temperature: float) -> float:
         """Returns the rotational heat capacity times T in eV.
 
         Parameters
@@ -426,7 +431,7 @@ class BaseThermoChem(ABC):
     def get_vib_entropy_contribution(self,
                                      temperature: float,
                                      return_list: bool = False
-                                     ) -> _FLOAT_OR_FLOATWITHDICT:
+                                     ) -> Union[float, Sequence[float]]:
         """Calculates the entropy due to vibrations for a set of vibrations
         given in eV and a temperature given in Kelvin.  Returns the entropy
         in eV/K."""
@@ -453,10 +458,10 @@ class BaseThermoChem(ABC):
             translation: bool = False,
             vibration: bool = False,
             rotation: bool = False,
-            geometry: _GEOMETRY_OPTIONS = None,
+            geometry: Optional[_GEOMETRY_OPTIONS] = None,
             electronic: bool = False,
-            pressure: float = None,
-            symmetrynumber: int = None) -> _FLOAT_OR_FLOATWITHDICT:
+            pressure: Optional[float] = None,
+            symmetrynumber: Optional[int] = None) -> _FLOAT_OR_FLOATWITHDICT:
         """Returns the entropy, in eV/K and a dict of the contributions"""
 
         if (geometry in ['linear', 'nonlinear']) and (symmetrynumber is None):
@@ -466,6 +471,10 @@ class BaseThermoChem(ABC):
         if not hasattr(self, 'atoms'):
             raise ValueError(
                 'Atoms object required for ideal entropy calculation.')
+
+        if electronic and (not hasattr(self, 'spin')):
+            raise ValueError(
+                'Spin value required for electronic entropy calculation.')
 
         S = 0.0
         ret = {}
@@ -511,7 +520,8 @@ class BaseThermoChem(ABC):
 
         # Vibrational entropy
         if vibration:
-            S_v = self.get_vib_entropy_contribution(temperature)
+            S_v: float = self.get_vib_entropy_contribution(temperature,
+                                                           return_list=False)
             S += S_v
             ret['S_v'] = S_v
 
@@ -549,11 +559,11 @@ class HarmonicThermo(BaseThermoChem):
         raised, if *imag_modes_handling* is 'raise'.
     """
 
-    def __init__(self, vib_energies: List[complex],
+    def __init__(self, vib_energies: Sequence[complex],
                  potentialenergy: float = 0.,
                  imag_modes_handling: _IMAG_MODES_OPTIONS = 'error',
-                 raise_to: float = None,
-                 modes: List[AbstractMode] = None) -> None:
+                 raise_to: Optional[float] = None,
+                 modes: Optional[Sequence[AbstractMode]] = None) -> None:
 
         # Check for imaginary frequencies.
         vib_energies, n_imag = _clean_vib_energies(
@@ -673,13 +683,13 @@ class QuasiHarmonicThermo(HarmonicThermo):
     """
 
     @staticmethod
-    def _raise(input: List[float], raise_to: float) -> List[float]:
+    def _raise(input: Sequence[float], raise_to: float) -> Sequence[float]:
         return [raise_to if x < raise_to else x for x in input]
 
-    def __init__(self, vib_energies: List[complex],
+    def __init__(self, vib_energies: Sequence[complex],
                  potentialenergy: float = 0.,
                  imag_modes_handling: _IMAG_MODES_OPTIONS = 'error',
-                 modes: List[AbstractMode] = None,
+                 modes: Optional[Sequence[AbstractMode]] = None,
                  raise_to: float = 100 * units.invcm) -> None:
 
         # Check for imaginary frequencies.
@@ -707,7 +717,7 @@ class MSRRHOThermo(QuasiHarmonicThermo):
     atoms: an ASE atoms object
         used to calculate rotational moments of inertia and molecular mass
     tau : float
-        the vibrational energy threshold in :math:`cm^{-1}`, named
+        the vibrational energy threshold in :math:`cm^{-1}`, namcomplexed
         :math:`\\tau` in :doi:`10.1039/D1SC00621E`.
         Values close or equal to 0 will result in the standard harmonic
         approximation. Defaults to :math:`35cm^{-1}`.
@@ -729,29 +739,29 @@ class MSRRHOThermo(QuasiHarmonicThermo):
     them to real by multiplying them with :math:`-i`).
     """
 
-    def __init__(self, vib_energies: List[complex], atoms: Atoms,
+    def __init__(self, vib_energies: Sequence[complex], atoms: Atoms,
                  potentialenergy: float = 0.,
                  tau: float = 35., nu_scal: float = 1.0,
                  treat_int_energy: bool = False,
-                 modes: List[AbstractMode] = None) -> None:
+                 modes: Optional[Sequence[AbstractMode]] = None) -> None:
 
         inertia = np.mean(atoms.get_moments_of_inertia())
         self.atoms = atoms
 
         # clean the energies
-        vib_energies, n_imag = _clean_vib_energies(
+        vib_e, n_imag = _clean_vib_energies(
             vib_energies, handling='invert')
         self.nu_scal = nu_scal
         # scale the frequencies (i.e. energies) before passing them on
-        vib_energies = np.multiply(vib_energies, nu_scal)
+        vib_e = np.multiply(vib_e, nu_scal).tolist()
 
         if modes is None:
             modes = [RRHOMode(energy, inertia,
                               tau=tau,
                               treat_int_energy=treat_int_energy
-                              ) for energy in vib_energies]
+                              ) for energy in vib_e]
 
-        super().__init__(vib_energies,
+        super().__init__(vib_e,
                          potentialenergy=potentialenergy,
                          imag_modes_handling='error',
                          modes=modes,
@@ -1063,23 +1073,20 @@ class IdealGasThermo(BaseThermoChem):
 
     """
 
-    def __init__(self, vib_energies: List[complex],
+    def __init__(self, vib_energies: Sequence[complex],
                  geometry: _GEOMETRY_OPTIONS,
                  potentialenergy: float = 0.,
-                 atoms: Atoms = None,
-                 symmetrynumber: int = None,
-                 spin: float = None,
-                 natoms: int = None,
+                 atoms: Optional[Atoms] = None,
+                 symmetrynumber: Optional[int] = None,
+                 spin: Optional[float] = None,
+                 natoms: Optional[int] = None,
                  imag_modes_handling: _IMAG_MODES_OPTIONS = 'error',
-                 modes: List[AbstractMode] = None) -> None:
+                 modes: Optional[Sequence[AbstractMode]] = None) -> None:
         self.potentialenergy = potentialenergy
         self.geometry = geometry
-        self.atoms = atoms
         self.sigma = symmetrynumber
-        self.spin = spin
         if natoms is None and atoms:
             natoms = len(atoms)
-        self.natoms = natoms
 
         # Sort the vibrations
         vib_energies = list(vib_energies)
@@ -1100,7 +1107,9 @@ class IdealGasThermo(BaseThermoChem):
         vib_energies, n_imag = _clean_vib_energies(
             vib_energies, handling=imag_modes_handling
         )
-        super().__init__(vib_energies)
+        super().__init__(vib_energies,
+                         atoms=atoms,
+                         spin=spin)
         self.n_imag = n_imag
 
     def get_internal_energy(self, temperature: float,
@@ -1181,14 +1190,14 @@ class IdealGasThermo(BaseThermoChem):
         vprint('=' * 49)
         vprint('%15s%13s     %13s' % ('', 'S', 'T*S'))
 
-        S, S_dict = super().get_ideal_entropy(temperature,
-                                              translation=True,
-                                              vibration=True,
-                                              rotation=True,
-                                              geometry=self.geometry,
-                                              electronic=True,
-                                              pressure=pressure,
-                                              symmetrynumber=self.sigma)
+        S, S_dict = self.get_ideal_entropy(temperature,
+                                            translation=True,
+                                            vibration=True,
+                                            rotation=True,
+                                            geometry=self.geometry,
+                                            electronic=True,
+                                            pressure=pressure,
+                                            symmetrynumber=self.sigma)
 
         vprint(
             fmt %
@@ -1392,9 +1401,10 @@ class CrystalThermo(BaseThermoChem):
         return F
 
 
-def _clean_vib_energies(vib_energies: List[complex],
+def _clean_vib_energies(vib_energies: Sequence[complex],
                         handling: _IMAG_MODES_OPTIONS = 'error',
-                        value: float = None) -> Tuple[List[float], int]:
+                        value: Optional[float] = None
+                        ) -> Tuple[Sequence[float], int]:
     """Checks and deal with the presence of imaginary vibrational modes
 
     Also removes +0.j from real vibrational energies.
@@ -1426,10 +1436,11 @@ def _clean_vib_energies(vib_energies: List[complex],
     n_imag : int
         the number of imaginary frequencies treated.
     """
+    ret: Sequence[float] = []
     if handling.lower() == 'remove':
         n_vib_energies = len(vib_energies)
-        vib_energies = [v for v in vib_energies if np.real(v) > 0]
-        n_imag = n_vib_energies - len(vib_energies)
+        ret = [float(v.real) for v in vib_energies if np.real(v) > 0]
+        n_imag = n_vib_energies - len(ret)
         if n_imag > 0:
             warn(f"{n_imag} imag modes removed", UserWarning)
     elif handling.lower() == 'error':
@@ -1438,16 +1449,16 @@ def _clean_vib_energies(vib_energies: List[complex],
         n_imag = 0
     elif handling.lower() == 'invert':
         n_imag = sum(np.iscomplex(vib_energies))
-        vib_energies = [np.imag(v) if np.iscomplex(v)
-                        else v for v in vib_energies]
+        ret = [np.imag(v) if np.iscomplex(v)
+                        else float(v.real) for v in vib_energies]
     elif handling.lower() == 'raise':
         if value is None:
             raise ValueError("Value must be specified when handling='raise'.")
         n_imag = sum(np.iscomplex(vib_energies))
-        vib_energies = [value if np.iscomplex(v)
-                        else v for v in vib_energies]
+        ret = [value if np.iscomplex(v)
+                        else float(v.real) for v in vib_energies]
     else:
         raise ValueError(f"Unknown handling option: {handling}")
-    vib_energies = np.real(vib_energies).tolist()  # clear +0.j
+    ret = np.real(vib_energies).tolist()  # clear +0.j
 
-    return vib_energies, n_imag
+    return ret, n_imag
