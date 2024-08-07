@@ -4,7 +4,7 @@ outputs."""
 import os
 import sys
 from warnings import warn
-from typing import Dict, List, Tuple, Literal, Optional, Type, Sequence, Union
+from typing import Dict, List, Literal, Optional, Tuple, Type, Union
 from numbers import Real
 from abc import ABC, abstractmethod
 
@@ -15,13 +15,16 @@ from ase import units, Atoms
 
 _IMAG_MODES_OPTIONS = Literal['remove', 'error', 'invert', 'raise']
 _GEOMETRY_OPTIONS = Literal['linear', 'nonlinear', 'monatomic']
+_FLOAT_OR_FLOATWITHDICT = Union[float, Tuple[float, Dict[str, float]]]
+
 
 def _sum_contributions(contrib_dicts: List[Dict[str, float]]) -> float:
     """Combine a Dict of floats to their sum.
-    
+
     Ommits keys starting with an underscore.
     """
-    return np.sum([ value for key, value in contrib_dicts.items() if not key.startswith('_')])
+    return np.sum([value for key, value in contrib_dicts.items()
+                   if not key.startswith('_')])
 
 
 class AbstractMode(ABC):
@@ -31,17 +34,20 @@ class AbstractMode(ABC):
         self.energy = energy
 
     @abstractmethod
-    def get_internal_energy(self, temperature: float, contributions: bool) -> float:
+    def get_internal_energy(
+            self,
+            temperature: float,
+            contributions: bool) -> float:
         raise NotImplementedError
-    
+
     @abstractmethod
     def get_entropy(self, temperature: float, contributions: bool) -> float:
         raise NotImplementedError
-    
+
     def get_ZPE_correction(self):
         """Returns the zero-point vibrational energy correction in eV."""
         return 0.5 * self.energy
-    
+
     def get_vib_energy_contribution(self, temperature: float) -> float:
         """Calculates the change in internal energy due to vibrations from
         0K to the specified temperature for a set of vibrations given in
@@ -58,11 +64,14 @@ class AbstractMode(ABC):
         S_v *= units.kB
         return S_v
 
+
 class HarmonicMode(AbstractMode):
     """Class for a single harmonic mode."""
 
-    def get_internal_energy(self, temperature: float,
-        contributions: bool) -> Union[float, Tuple[float, Dict[str, float]]]:
+    def get_internal_energy(self,
+                            temperature: float,
+                            contributions: bool
+                            ) -> _FLOAT_OR_FLOATWITHDICT:
         """Returns the internal energy in the harmonic approximation at a
         specified temperature (K)."""
         ret = {}
@@ -75,8 +84,9 @@ class HarmonicMode(AbstractMode):
         else:
             return ret_sum
 
-    def get_entropy(self, temperature: float,
-        contributions: bool) -> Union[float, Tuple[float, Dict[str, float]]]:
+    def get_entropy(self,
+                    temperature: float,
+                    contributions: bool) -> _FLOAT_OR_FLOATWITHDICT:
         """Returns the entropy in the harmonic approximation at a specified
         temperature (K)."""
         ret = {}
@@ -101,7 +111,7 @@ class RRHOMode(HarmonicMode):
         :math:`\\tau` in :doi:`10.1039/D1SC00621E`.
         Values close or equal to 0 will result in the standard harmonic
         approximation. Defaults to :math:`35cm^{-1}`.
-    internal_energy_treatment : bool
+    treat_int_energy : bool
         Extend the msRRHO treatement to the internal thermal energy.
         If False, only the entropy contribution as in Grimmmes paper is
         modified according to the RRHO scheme. If True, the approach of
@@ -110,27 +120,27 @@ class RRHOMode(HarmonicMode):
     """
 
     def __init__(self, energy: float,
-                mean_inertia: float,
-                tau: float=35.0,
-                internal_energy_treatment: bool=False) -> None:
+                 mean_inertia: float,
+                 tau: float = 35.0,
+                 treat_int_energy: bool = False) -> None:
         if np.iscomplex(energy):
-            raise ValueError("Imaginary frequencies are not allowed in RRHO mode.")
+            raise ValueError(
+                "Imaginary frequencies are not allowed in RRHO mode.")
         super().__init__(energy)
         self._mean_inertia = mean_inertia
         self._tau = tau
         self._alpha = 4  # from paper 10.1002/chem.201200497
-        self.internal_energy_treatment = internal_energy_treatment 
-
+        self.treat_int_energy = treat_int_energy
 
     @property
     def frequency(self) -> float:
         return self.energy / units.invcm
-    
+
     def _head_gordon_damp(self, freq: float) -> float:
         """Head-Gordon damping function.
 
         Equation 8 from :doi:`10.1002/chem.201200497`
-        
+
         Parameters
         ----------
         freq : float
@@ -141,19 +151,18 @@ class RRHOMode(HarmonicMode):
         float
         """
         return 1 / (1 + (self._tau / freq)**self._alpha)
-    
+
     def _apply_head_gordon_damp(self, freq: float,
                                 large_part: float,
                                 small_part: float) -> float:
         """Apply the head-gordon damping scheme to two contributions.
-        
+
         Equation 7 from :doi:`10.1002/chem.201200497`
-        
+
         Returns the damped sum of the two contributions."""
         part_one = self._head_gordon_damp(freq) * large_part
         part_two = (1 - self._head_gordon_damp(freq)) * small_part
         return part_one + part_two
-    
 
     def get_RRHO_entropy_r(self, temperature: float) -> float:
         """Calculates the rotation of a rigid rotor for low frequency modes.
@@ -162,37 +171,39 @@ class RRHOMode(HarmonicMode):
 
         Returns the entropy contribution in eV/K."""
         kT = units._k * temperature
-        R = units._k * units._Nav # J / K / mol
+        R = units._k * units._Nav  # J / K / mol
         B_av = (self._mean_inertia /
-                    (units.kg * units.m**2))  # from amu/A^2 to kg m^2
+                (units.kg * units.m**2))  # from amu/A^2 to kg m^2
         # note, some codes use B_av = 1e-44 as in 10.1002/chem.201200497
         # eq 4
-        omega = units._c * self.frequency * 1e2   # s^-1  
+        omega = units._c * self.frequency * 1e2   # s^-1
         mu = units._hplanck / (8 * np.pi**2 * omega)  # kg m^2
         # eq 5
         mu_prime = (mu * B_av) / (mu + B_av)  # kg m^2
         # eq 6
         x = np.sqrt(8 * np.pi**3 * mu_prime * kT / (units._hplanck)**2)
         # filter zeros out and set them to zero
-        log_x = np.log(x, out=np.zeros_like(x, dtype='float64'), where=(x != 0))
+        log_x = np.log(x, out=np.zeros_like(x, dtype='float64'),
+                       where=(x != 0))
         S_r = R * (0.5 + log_x)  # J/(Js)^2
-        S_r *= units.J / units._Nav # J/K/mol to eV/K
+        S_r *= units.J / units._Nav  # J/K/mol to eV/K
         return S_r
 
-
-    def get_entropy(self, temperature: float,
-                    contributions: bool) -> Union[float, Tuple[float, Dict[str, float]]]:
+    def get_entropy(self,
+                    temperature: float,
+                    contributions: bool) -> _FLOAT_OR_FLOATWITHDICT:
         ret = {}
         ret['_S_vib_v'] = self.get_vib_entropy_contribution(temperature)
         ret['_S_vib_r'] = self.get_RRHO_entropy_r(temperature)
-        ret['S_vib_damped'] = self._apply_head_gordon_damp(self.frequency,
-                                ret['_S_vib_v'], ret['_S_vib_r'])
+        ret['S_vib_damped'] = self._apply_head_gordon_damp(
+            self.frequency, ret['_S_vib_v'], ret['_S_vib_r'])
         if contributions:
             return ret['S_vib_damped'], ret
         else:
             return ret['S_vib_damped']
-    
-    def get_rrho_internal_energy_v_contribution(self, temperature: float) -> float:
+
+    def get_rrho_internal_energy_v_contribution(
+            self, temperature: float) -> float:
         """RRHO Vibrational Internal Energy Contribution from
         :doi:`10.1002/jcc.27129`.
 
@@ -202,9 +213,9 @@ class RRHOMode(HarmonicMode):
         # hv = self.energy
         theta = self.energy / units.kB
         E_v = 0.5 + 1 / (np.exp(theta / temperature) - 1)
-        E_v *= self.energy # = theta * units.kB
+        E_v *= self.energy  # = theta * units.kB
         return E_v
-    
+
     @staticmethod
     def get_rrho_internal_energy_r_contribution(temperature: float) -> float:
         """Calculates the rotation of a rigid rotor contribution.
@@ -218,28 +229,30 @@ class RRHOMode(HarmonicMode):
         E_r *= units.J / units._Nav
         return E_r
 
-
-    def get_internal_energy(self, temperature: float,
-        contributions: bool) -> Union[float, Tuple[float, Dict[str, float]]]:
+    def get_internal_energy(self,
+                            temperature: float,
+                            contributions: bool) -> _FLOAT_OR_FLOATWITHDICT:
         """Returns the internal energy in the msRRHO approximation at a
         specified temperature (K).
-        
-        If self.internal_energy_treatment is True, the approach of Otlyotov and Minenkov
-        :doi:`10.1002/jcc.27129` is used. Otherwise, the approach of
-        Grimme :doi:`10.1002/chem.201200497` is used.
+
+        If self.treat_int_energy is True, the approach of Otlyotov
+        and Minenkov :doi:`10.1002/jcc.27129` is used. Otherwise, the approach
+        of Grimme :doi:`10.1002/chem.201200497` is used.
         """
-        if self.internal_energy_treatment:
-            # Otlyotov and Minenkov approach with damping between vibrational and rotational
-            # contributions to the internal energy
-            # Note: The ZPE is not needed here, as the formula in the paper uses the
-            # "bottom of the well" as reference. See 
+        if self.treat_int_energy:
+            # Otlyotov and Minenkov approach with damping between vibrational
+            # and rotational contributions to the internal energy
+            # Note: The ZPE is not needed here, as the formula in the paper
+            # uses the "bottom of the well" as reference. See
             # https://gaussian.com/wp-content/uploads/dl/thermo.pdf
             # for more formulas
             ret = {}
-            ret['_dU_vib_v'] = self.get_rrho_internal_energy_v_contribution(temperature)
-            ret['_dU_vib_r'] = self.get_rrho_internal_energy_r_contribution(temperature)
-            ret['dU_vib_damped'] = self._apply_head_gordon_damp(self.frequency,
-                                    ret['_dU_vib_v'], ret['_dU_vib_r'])
+            ret['_dU_vib_v'] = self.get_rrho_internal_energy_v_contribution(
+                temperature)
+            ret['_dU_vib_r'] = self.get_rrho_internal_energy_r_contribution(
+                temperature)
+            ret['dU_vib_damped'] = self._apply_head_gordon_damp(
+                self.frequency, ret['_dU_vib_v'], ret['_dU_vib_r'])
             if contributions:
                 return ret['dU_vib_damped'], ret
             else:
@@ -249,13 +262,14 @@ class RRHOMode(HarmonicMode):
             return super().get_internal_energy(temperature, contributions)
 
 
-
 class BaseThermoChem(ABC):
     """Abstract base class containing common methods used in thermochemistry
     calculations."""
 
-    def __init__(self, vib_energies: List[complex], atoms: Optional[Atoms]=None,
-                 modes: Optional[List[Type[AbstractMode]]]=None) -> None:
+    def __init__(self,
+                 vib_energies: List[complex],
+                 atoms: Optional[Atoms] = None,
+                 modes: Optional[List[Type[AbstractMode]]] = None) -> None:
         self._vib_energies = vib_energies
         self.referencepressure = 1.0e5  # Pa
         if atoms:
@@ -264,7 +278,8 @@ class BaseThermoChem(ABC):
             self.modes = modes
 
     @staticmethod
-    def combine_contributions(contrib_dicts: List[Dict[str, float]]) -> Dict[str, float]:
+    def combine_contributions(
+            contrib_dicts: List[Dict[str, float]]) -> Dict[str, float]:
         """Combine the contributions from multiple modes."""
         ret = {}
         for contrib_dict in contrib_dicts:
@@ -274,8 +289,9 @@ class BaseThermoChem(ABC):
                 else:
                     ret[key] = value
         return ret
-    
-    def print_contributions(self, contributions: Dict[str, float], verbose: bool) -> None:
+
+    def print_contributions(
+            self, contributions: Dict[str, float], verbose: bool) -> None:
         """Print the contributions."""
         if verbose:
             fmt = "{:<15s}{:13.3f} eV"
@@ -288,36 +304,41 @@ class BaseThermoChem(ABC):
     @abstractmethod
     def get_internal_energy(self, temperature: float, verbose: bool) -> float:
         raise NotImplementedError
-    
+
     @abstractmethod
     def get_entropy(self, temperature: float, verbose: bool) -> float:
         raise NotImplementedError
 
     @property
     def vib_energies(self) -> List[complex]:
-        """For backwards compatibility, delete the following after some time."""
+        """For backwards compatibility.
+            Delete the following after some time."""
         return self._vib_energies
-    
+
     @vib_energies.setter
     def vib_energies(self, value: List[complex]) -> None:
         """For backwards compatibility, raise a deprecation warning."""
-        warn("The vib_energies attribute is deprecated and will be removed in a future release. "
-             "Please use the modes attribute instead.", DeprecationWarning)
+        warn(
+            "The vib_energies attribute is deprecated and will be removed in a"
+            "future release. Please use the modes attribute instead.",
+            DeprecationWarning)
         self._vib_energies = value
 
     @property
     def imag_modes_handling(self) -> _IMAG_MODES_OPTIONS:
-        """For backwards compatibility, delete the following after some time."""
+        """For backwards compatibility
+            Delete the following after some time."""
         return self._imag_modes_handling
-    
+
     @imag_modes_handling.setter
     def imag_modes_handling(self, value: _IMAG_MODES_OPTIONS) -> None:
         """For backwards compatibility, raise a deprecation warning."""
-        warn("The imag_modes_handling attribute is deprecated and will be removed in a future release. "
-             "Please use the raise_to attribute instead.", DeprecationWarning)
+        warn(
+            "The imag_modes_handling attribute is deprecated and will be "
+            "removed in a future release. Please use the raise_to attribute",
+            DeprecationWarning)
         self._imag_modes_handling = value
 
-    
     def get_ZPE_correction(self) -> float:
         """Returns the zero-point vibrational energy correction in eV."""
         return 0.5 * np.sum(self.vib_energies)
@@ -325,7 +346,7 @@ class BaseThermoChem(ABC):
     @staticmethod
     def get_ideal_translational_energy(temperature: float) -> float:
         """Returns the translational heat capacity times T in eV.
-        
+
         Parameters
         ----------
         temperature : float
@@ -335,20 +356,22 @@ class BaseThermoChem(ABC):
         -------
         float
         """
-        return 3. / 2. * units.kB * temperature  # translational heat capacity (3-d gas)
+        return 3. / 2. * units.kB * \
+            temperature  # translational heat capacity (3-d gas)
 
     @staticmethod
     def get_ideal_rotational_energy(geometry: _GEOMETRY_OPTIONS,
                                     temperature: Real) -> float:
         """Returns the rotational heat capacity times T in eV.
-        
+
         Parameters
         ----------
         geometry : str
-            The geometry of the molecule. Options are 'nonlinear', 'linear', and 'monatomic'.
+            The geometry of the molecule. Options are 'nonlinear',
+            'linear', and 'monatomic'.
         temperature : float
             The temperature in Kelvin.
-        
+
         Returns
         -------
         float
@@ -362,17 +385,20 @@ class BaseThermoChem(ABC):
         else:
             raise ValueError('Invalid geometry: %s' % geometry)
         return Cv_r * temperature
-    
-    def get_ideal_trans_entropy(self, atoms: Atoms, temperature: float) -> float:
+
+    def get_ideal_trans_entropy(
+            self,
+            atoms: Atoms,
+            temperature: float) -> float:
         """Returns the translational entropy in eV/K.
-        
+
         Parameters
         ----------
         atoms : ase.Atoms
             The atoms object.
         temperature : float
             The temperature in Kelvin.
-        
+
         Returns
         -------
         float
@@ -384,7 +410,6 @@ class BaseThermoChem(ABC):
         S_t *= units._k * temperature / self.referencepressure
         S_t = units.kB * (np.log(S_t) + 5.0 / 2.0)
         return S_t
-
 
     def get_vib_energy_contribution(self, temperature: float) -> float:
         """Calculates the change in internal energy due to vibrations from
@@ -398,17 +423,19 @@ class BaseThermoChem(ABC):
             dU += energy / (np.exp(energy / kT) - 1.)
         return dU
 
-    def get_vib_entropy_contribution(self, temperature:float,
-                                      return_list: bool=False
-                                      ) -> Union[float, Tuple[float, Dict[str, float]]]:
+    def get_vib_entropy_contribution(self,
+                                     temperature: float,
+                                     return_list: bool = False
+                                     ) -> _FLOAT_OR_FLOATWITHDICT:
         """Calculates the entropy due to vibrations for a set of vibrations
         given in eV and a temperature given in Kelvin.  Returns the entropy
         in eV/K."""
         kT = units.kB * temperature
         S_v = 0.
         energies = np.array(self.vib_energies)
-        energies /= kT # eV/ eV/K*K
-        S_v = energies / (np.exp(energies) - 1.) - np.log(1. - np.exp(-energies))
+        energies /= kT  # eV/ eV/K*K
+        S_v = energies / (np.exp(energies) - 1.) - \
+            np.log(1. - np.exp(-energies))
         S_v *= units.kB
         if return_list:
             return S_v
@@ -419,22 +446,26 @@ class BaseThermoChem(ABC):
         """Print output if verbose flag True."""
         if self.verbose:
             sys.stdout.write(text + os.linesep)
-    
-    def get_ideal_entropy(self, temperature: float,
-                           translation: bool=False,
-                           vibration: bool=False,
-                           rotation: bool=False,
-                           geometry: _GEOMETRY_OPTIONS=None,
-                           electronic: bool=False,
-                           pressure: float=None,
-                           symmetrynumber: int=None) ->Tuple[float, Dict[str, float]]:
+
+    def get_ideal_entropy(
+            self,
+            temperature: float,
+            translation: bool = False,
+            vibration: bool = False,
+            rotation: bool = False,
+            geometry: _GEOMETRY_OPTIONS = None,
+            electronic: bool = False,
+            pressure: float = None,
+            symmetrynumber: int = None) -> _FLOAT_OR_FLOATWITHDICT:
         """Returns the entropy, in eV/K and a dict of the contributions"""
 
         if (geometry in ['linear', 'nonlinear']) and (symmetrynumber is None):
-            raise ValueError('Symmetry number required for linear and nonlinear molecules.')
-        
+            raise ValueError(
+                'Symmetry number required for linear and nonlinear molecules.')
+
         if not hasattr(self, 'atoms'):
-            raise ValueError('Atoms object required for ideal entropy calculation.')
+            raise ValueError(
+                'Atoms object required for ideal entropy calculation.')
 
         S = 0.0
         ret = {}
@@ -465,13 +496,12 @@ class BaseThermoChem(ABC):
                             (10.0**10)**2)  # kg m^2
                 inertia = max(inertias)  # should be two identical and one zero
                 S_r = (8 * np.pi**2 * inertia * units._k * temperature /
-                    symmetrynumber / units._hplanck**2)
+                       symmetrynumber / units._hplanck**2)
                 S_r = units.kB * (np.log(S_r) + 1.)
             else:
                 raise RuntimeError(f"Invalid geometry: {geometry}")
             S += S_r
             ret['S_r'] = S_r
-        
 
         # Electronic entropy.
         if electronic:
@@ -519,10 +549,11 @@ class HarmonicThermo(BaseThermoChem):
         raised, if *imag_modes_handling* is 'raise'.
     """
 
-    def __init__(self, vib_energies: List[complex], potentialenergy: float=0.,
-                 imag_modes_handling: _IMAG_MODES_OPTIONS='error',
-                 raise_to: float=None,
-                 modes: List[AbstractMode]=None) -> None:
+    def __init__(self, vib_energies: List[complex],
+                 potentialenergy: float = 0.,
+                 imag_modes_handling: _IMAG_MODES_OPTIONS = 'error',
+                 raise_to: float = None,
+                 modes: List[AbstractMode] = None) -> None:
 
         # Check for imaginary frequencies.
         vib_energies, n_imag = _clean_vib_energies(
@@ -538,7 +569,7 @@ class HarmonicThermo(BaseThermoChem):
         self.potentialenergy = potentialenergy
 
     def get_internal_energy(self, temperature: float,
-                             verbose: bool=True) -> float:
+                            verbose: bool = True) -> float:
         """Returns the internal energy, in eV, in the harmonic approximation
         at a specified temperature (K)."""
 
@@ -562,7 +593,7 @@ class HarmonicThermo(BaseThermoChem):
 
         return U
 
-    def get_entropy(self, temperature: float, verbose: bool=True) -> float:
+    def get_entropy(self, temperature: float, verbose: bool = True) -> float:
         """Returns the entropy, in eV/ at a specified temperature (K)."""
 
         self.verbose = verbose
@@ -571,7 +602,6 @@ class HarmonicThermo(BaseThermoChem):
         vprint('Entropy components at T = %.2f K:' % temperature)
         vprint('=' * 49)
         vprint('%15s%13s     %13s' % ('', 'S', 'T*S'))
-
 
         S, contribs = zip(*[mode.get_entropy(
             temperature, contributions=True) for mode in self.modes])
@@ -585,7 +615,7 @@ class HarmonicThermo(BaseThermoChem):
         return S
 
     def get_helmholtz_energy(self, temperature: float,
-                              verbose: bool=True) -> float:
+                             verbose: bool = True) -> float:
         """Returns the Helmholtz free energy, in eV, in the harmonic
         approximation at a specified temperature (K)."""
 
@@ -638,18 +668,19 @@ class QuasiHarmonicThermo(HarmonicThermo):
         The value to which all frequencies smaller than this value will be
         raised. If *imag_modes_handling* is 'raise' this also applies to
         imaginary frequencies. Unit is eV. Defaults to
-        :math:`100cm^{-1} = 0.012398 eV`. 
+        :math:`100cm^{-1} = 0.012398 eV`.
 
     """
 
     @staticmethod
     def _raise(input: List[float], raise_to: float) -> List[float]:
         return [raise_to if x < raise_to else x for x in input]
-    
-    def __init__(self, vib_energies: List[complex], potentialenergy: float=0.,
-                 imag_modes_handling: _IMAG_MODES_OPTIONS='error',
-                 modes: List[AbstractMode]=None,
-                 raise_to: float=100 * units.invcm) -> None:
+
+    def __init__(self, vib_energies: List[complex],
+                 potentialenergy: float = 0.,
+                 imag_modes_handling: _IMAG_MODES_OPTIONS = 'error',
+                 modes: List[AbstractMode] = None,
+                 raise_to: float = 100 * units.invcm) -> None:
 
         # Check for imaginary frequencies.
         vib_energies, n_imag = _clean_vib_energies(
@@ -661,14 +692,15 @@ class QuasiHarmonicThermo(HarmonicThermo):
         if modes is None:
             modes = [HarmonicMode(energy) for energy in self.vib_energies]
         super().__init__(self.vib_energies, potentialenergy=potentialenergy,
-                        imag_modes_handling=imag_modes_handling,
-                        raise_to=raise_to,
-                        modes=modes)
+                         imag_modes_handling=imag_modes_handling,
+                         raise_to=raise_to,
+                         modes=modes)
 
 
 class MSRRHOThermo(QuasiHarmonicThermo):
-    """Subclass of :class:`QuasiHarmonicThermo`, including Grimme's scaling method
-    based on :doi:`10.1002/chem.201200497` and :doi:`10.1039/D1SC00621E`.
+    """Subclass of :class:`QuasiHarmonicThermo`,
+    including Grimme's scaling method based on
+    :doi:`10.1002/chem.201200497` and :doi:`10.1039/D1SC00621E`.
 
     Inputs:
 
@@ -687,47 +719,44 @@ class MSRRHOThermo(QuasiHarmonicThermo):
         for values corresponding to your level of theory.
         Note that for `\\nu_{scal}=1.0` this method is equivalent to
         the quasi-RRHO method in :doi:`10.1002/chem.201200497`.
-    internal_energy_treatment : bool
-        Extend the msRRHO treatement to the internal energy. If False, only 
-        the entropy contribution as in Grimmmes paper is considered. If true, the
-        approach of Otlyotov and Minenkov :doi:`10.1002/jcc.27129` is used.
+    treat_int_energy : bool
+        Extend the msRRHO treatement to the internal energy. If False, only
+        the entropy contribution as in Grimmmes paper is considered.
+        If true, the approach of Otlyotov and Minenkov
+        :doi:`10.1002/jcc.27129` is used.
 
-    We enforce treating imaginary modes as Grimme suggests (converting 
+    We enforce treating imaginary modes as Grimme suggests (converting
     them to real by multiplying them with :math:`-i`).
     """
 
     def __init__(self, vib_energies: List[complex], atoms: Atoms,
-                 potentialenergy: float=0.,
-                 tau: float=35., nu_scal: float=1.0,
-                 internal_energy_treatment: bool=False,
-                 modes: List[AbstractMode]=None) -> None:
-        
-        
+                 potentialenergy: float = 0.,
+                 tau: float = 35., nu_scal: float = 1.0,
+                 treat_int_energy: bool = False,
+                 modes: List[AbstractMode] = None) -> None:
+
         inertia = np.mean(atoms.get_moments_of_inertia())
         self.atoms = atoms
-        
+
         # clean the energies
         vib_energies, n_imag = _clean_vib_energies(
-                                vib_energies, handling='invert')
+            vib_energies, handling='invert')
         self.nu_scal = nu_scal
         # scale the frequencies (i.e. energies) before passing them on
         vib_energies = np.multiply(vib_energies, nu_scal)
 
         if modes is None:
             modes = [RRHOMode(energy, inertia,
-                            tau=tau,
-                            internal_energy_treatment=internal_energy_treatment
-                            ) for energy in vib_energies]
-            
+                              tau=tau,
+                              treat_int_energy=treat_int_energy
+                              ) for energy in vib_energies]
+
         super().__init__(vib_energies,
-                            potentialenergy=potentialenergy,
-                            imag_modes_handling='error',
-                            modes=modes,
-                            raise_to=0.0)
-        self.internal_energy_treatment = internal_energy_treatment
-
-
-
+                         potentialenergy=potentialenergy,
+                         imag_modes_handling='error',
+                         modes=modes,
+                         raise_to=0.0)
+        self.treat_int_energy = treat_int_energy
 
 
 class HinderedThermo(BaseThermoChem):
@@ -788,7 +817,7 @@ class HinderedThermo(BaseThermoChem):
     def __init__(self, vib_energies, trans_barrier_energy, rot_barrier_energy,
                  sitedensity, rotationalminima, potentialenergy=0.,
                  mass=None, inertia=None, atoms=None, symmetrynumber=1,
-                 imag_modes_handling: _IMAG_MODES_OPTIONS='error'):
+                 imag_modes_handling: _IMAG_MODES_OPTIONS = 'error'):
 
         self.trans_barrier_energy = trans_barrier_energy * units._e
         self.rot_barrier_energy = rot_barrier_energy * units._e
@@ -831,8 +860,8 @@ class HinderedThermo(BaseThermoChem):
                                'atoms must be specified.')
 
         # Calculate hindered translational and rotational frequencies
-        self.freq_t = np.sqrt(self.trans_barrier_energy / (2 * self.mass *
-                                                           self.area))
+        self.freq_t = np.sqrt(self.trans_barrier_energy /
+                              (2 * self.mass * self.area))
         self.freq_r = 1. / (2 * np.pi) * np.sqrt(self.rotationalminima**2 *
                                                  self.rot_barrier_energy /
                                                  (2 * self.inertia))
@@ -1036,13 +1065,13 @@ class IdealGasThermo(BaseThermoChem):
 
     def __init__(self, vib_energies: List[complex],
                  geometry: _GEOMETRY_OPTIONS,
-                 potentialenergy: float=0.,
-                 atoms: Atoms=None,
-                 symmetrynumber: int=None,
-                 spin: float=None,
-                 natoms: int=None,
-                 imag_modes_handling: _IMAG_MODES_OPTIONS='error',
-                 modes: List[AbstractMode]=None) -> None:
+                 potentialenergy: float = 0.,
+                 atoms: Atoms = None,
+                 symmetrynumber: int = None,
+                 spin: float = None,
+                 natoms: int = None,
+                 imag_modes_handling: _IMAG_MODES_OPTIONS = 'error',
+                 modes: List[AbstractMode] = None) -> None:
         self.potentialenergy = potentialenergy
         self.geometry = geometry
         self.atoms = atoms
@@ -1075,7 +1104,7 @@ class IdealGasThermo(BaseThermoChem):
         self.n_imag = n_imag
 
     def get_internal_energy(self, temperature: float,
-                             verbose: bool=True) -> float:
+                            verbose: bool = True) -> float:
         """Returns the internal energy, in eV, in the ideal gas approximation
         at a specified temperature (K)."""
 
@@ -1099,7 +1128,7 @@ class IdealGasThermo(BaseThermoChem):
         U += Cv_tT
 
         Cv_rT = self.get_ideal_rotational_energy(self.geometry, temperature)
-        vprint(fmt % ('Cv_rot (0->T)', Cv_rT ))
+        vprint(fmt % ('Cv_rot (0->T)', Cv_rT))
         U += Cv_rT
 
         dU_v = self.get_vib_energy_contribution(temperature)
@@ -1112,7 +1141,7 @@ class IdealGasThermo(BaseThermoChem):
         return U
 
     def get_enthalpy(self, temperature: float,
-                      verbose: bool=True) -> float:
+                     verbose: bool = True) -> float:
         """Returns the enthalpy, in eV, in the ideal gas approximation
         at a specified temperature (K)."""
 
@@ -1134,10 +1163,9 @@ class IdealGasThermo(BaseThermoChem):
         vprint('=' * 31)
         return H
 
-
-    def get_entropy(self, temperature:float,
-                     pressure: float,
-                     verbose: bool=True) -> float:
+    def get_entropy(self, temperature: float,
+                    pressure: float,
+                    verbose: bool = True) -> float:
         """Returns the entropy, in eV/K, in the ideal gas approximation
         at a specified temperature (K) and pressure (Pa)."""
 
@@ -1149,30 +1177,41 @@ class IdealGasThermo(BaseThermoChem):
         vprint = self._vprint
         fmt = '%-15s%13.7f eV/K%13.3f eV'
         vprint('Entropy components at T = %.2f K and P = %.1f Pa:' %
-              (temperature, pressure))
+               (temperature, pressure))
         vprint('=' * 49)
         vprint('%15s%13s     %13s' % ('', 'S', 'T*S'))
 
         S, S_dict = super().get_ideal_entropy(temperature,
-                                translation=True, vibration=True,
-                                rotation=True, geometry=self.geometry,
-                                electronic=True,
-                                pressure=pressure,
-                                symmetrynumber=self.sigma)
+                                              translation=True,
+                                              vibration=True,
+                                              rotation=True,
+                                              geometry=self.geometry,
+                                              electronic=True,
+                                              pressure=pressure,
+                                              symmetrynumber=self.sigma)
 
-        vprint(fmt % ('S_trans (1 bar)', S_dict['S_t'], S_dict['S_t'] * temperature))
+        vprint(
+            fmt %
+            ('S_trans (1 bar)',
+                S_dict['S_t'],
+                S_dict['S_t'] *
+                temperature))
         vprint(fmt % ('S_rot', S_dict['S_r'], S_dict['S_r'] * temperature))
         vprint(fmt % ('S_elec', S_dict['S_e'], S_dict['S_e'] * temperature))
         vprint(fmt % ('S_vib', S_dict['S_v'], S_dict['S_v'] * temperature))
-        vprint(fmt % ('S (1 bar -> P)', S_dict['S_p'], S_dict['S_p'] * temperature))
+        vprint(
+            fmt %
+            ('S (1 bar -> P)',
+                S_dict['S_p'],
+                S_dict['S_p'] * temperature))
         vprint('-' * 49)
         vprint(fmt % ('S', S, S * temperature))
         vprint('=' * 49)
         return S
 
-    def get_gibbs_energy(self, temperature:float,
-                     pressure: float,
-                     verbose: bool=True) -> float:
+    def get_gibbs_energy(self, temperature: float,
+                         pressure: float,
+                         verbose: bool = True) -> float:
         """Returns the Gibbs free energy, in eV, in the ideal gas
         approximation at a specified temperature (K) and pressure (Pa)."""
 
@@ -1186,7 +1225,7 @@ class IdealGasThermo(BaseThermoChem):
 
         vprint('')
         vprint('Free energy components at T = %.2f K and P = %.1f Pa:' %
-              (temperature, pressure))
+               (temperature, pressure))
         vprint('=' * 23)
         fmt = '%5s%15.3f eV'
         vprint(fmt % ('H', H))
@@ -1250,10 +1289,10 @@ class CrystalThermo(BaseThermoChem):
         fmt = '%-15s%13.4f eV'
         if self.formula_units == 0:
             vprint('Internal energy components at '
-                  'T = %.2f K,\non a per-unit-cell basis:' % temperature)
+                   'T = %.2f K,\non a per-unit-cell basis:' % temperature)
         else:
             vprint('Internal energy components at '
-                  'T = %.2f K,\non a per-formula-unit basis:' % temperature)
+                   'T = %.2f K,\non a per-formula-unit basis:' % temperature)
         vprint('=' * 31)
 
         U = 0.
@@ -1298,10 +1337,10 @@ class CrystalThermo(BaseThermoChem):
         fmt = '%-15s%13.7f eV/K%13.4f eV'
         if self.formula_units == 0:
             vprint('Entropy components at '
-                  'T = %.2f K,\non a per-unit-cell basis:' % temperature)
+                   'T = %.2f K,\non a per-unit-cell basis:' % temperature)
         else:
             vprint('Entropy components at '
-                  'T = %.2f K,\non a per-formula-unit basis:' % temperature)
+                   'T = %.2f K,\non a per-formula-unit basis:' % temperature)
         vprint('=' * 49)
         vprint('%15s%13s     %13s' % ('', 'S', 'T*S'))
 
@@ -1339,10 +1378,10 @@ class CrystalThermo(BaseThermoChem):
         vprint('')
         if self.formula_units == 0:
             vprint('Helmholtz free energy components at '
-                  'T = %.2f K,\non a per-unit-cell basis:' % temperature)
+                   'T = %.2f K,\non a per-unit-cell basis:' % temperature)
         else:
             vprint('Helmholtz free energy components at '
-                  'T = %.2f K,\non a per-formula-unit basis:' % temperature)
+                   'T = %.2f K,\non a per-formula-unit basis:' % temperature)
         vprint('=' * 23)
         fmt = '%5s%15.4f eV'
         vprint(fmt % ('U', U))
@@ -1352,9 +1391,10 @@ class CrystalThermo(BaseThermoChem):
         vprint('=' * 23)
         return F
 
+
 def _clean_vib_energies(vib_energies: List[complex],
-                        handling: _IMAG_MODES_OPTIONS='error',
-                        value: float=None) -> Tuple[List[float], int]:
+                        handling: _IMAG_MODES_OPTIONS = 'error',
+                        value: float = None) -> Tuple[List[float], int]:
     """Checks and deal with the presence of imaginary vibrational modes
 
     Also removes +0.j from real vibrational energies.
@@ -1373,9 +1413,10 @@ def _clean_vib_energies(vib_energies: List[complex],
         If 'raise', all imaginary frequencies will be replaced with the value
         specified by the 'value' argument. See Cramer, Truhlar and coworkers.
         :doi:`10.1021/jp205508z`.
-    
+
     value : float
-        Value to which imaginary frequencies will be raised when handling='raise'.
+        Value to which imaginary frequencies will be raised when
+        handling='raise'.
 
     Outputs:
 
