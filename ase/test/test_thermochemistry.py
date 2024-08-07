@@ -53,7 +53,7 @@ def test_ideal_gas_thermo_n2(testdir):
     assert thermo.geometry == "linear"
     assert thermo.get_ZPE_correction() == pytest.approx(0.07632373926263808)
     assert thermo.get_enthalpy(1000) == pytest.approx(0.6719935644272014)
-    assert thermo.get_entropy(1000, 1e8) == pytest.approx(0.0017861226676818658)
+    assert thermo.get_entropy(1e3, 1e8) == pytest.approx(0.0017861226676818658)
     assert thermo.get_gibbs_energy(1000, 1e8) == pytest.approx(
         thermo.get_enthalpy(1000) - 1000 * thermo.get_entropy(1000, 1e8)
     )
@@ -110,7 +110,7 @@ def test_ideal_gas_thermo_ch3(testdir):
     assert thermo.geometry == "nonlinear"
     assert thermo.get_ZPE_correction() == pytest.approx(CH3_THERMO["ZPE"])
     assert thermo.get_enthalpy(1000) == pytest.approx(CH3_THERMO["enthalpy"])
-    assert thermo.get_entropy(1000, 1e8) == pytest.approx(CH3_THERMO["entropy"])
+    assert thermo.get_entropy(1e3, 1e8) == pytest.approx(CH3_THERMO["entropy"])
     assert thermo.get_gibbs_energy(1000, 1e8) == pytest.approx(
         thermo.get_enthalpy(1000) - 1000 * thermo.get_entropy(1000, 1e8)
     )
@@ -132,7 +132,7 @@ def test_ideal_gas_thermo_ch3_v2(testdir):
     assert thermo.geometry == "nonlinear"
     assert thermo.get_ZPE_correction() == pytest.approx(CH3_THERMO["ZPE"])
     assert thermo.get_enthalpy(1000) == pytest.approx(CH3_THERMO["enthalpy"])
-    assert thermo.get_entropy(1000, 1e8) == pytest.approx(CH3_THERMO["entropy"])
+    assert thermo.get_entropy(1e3, 1e8) == pytest.approx(CH3_THERMO["entropy"])
     assert thermo.get_gibbs_energy(1000, 1e8) == pytest.approx(
         thermo.get_enthalpy(1000) - 1000 * thermo.get_entropy(1000, 1e8)
     )
@@ -376,9 +376,10 @@ def test_msRRHO():
 
 def test_msRRHO_enthalpy_treatment():
     "Test proper functionality of msRRHO enthalpy method"
-    thermo = msRRHO_thermo(atoms=Atoms('H'), tau=35, internal_energy_treatment=True)
+    thermo = msRRHO_thermo(atoms=Atoms('H'), tau=35, treat_int_energy=True)
     helmholtz = thermo.get_helmholtz_energy(temperature=298.15)
-    assert helmholtz == pytest.approx(HELMHOLTZ_msRRHO_internal_energy_treatment)
+    assert helmholtz == pytest.approx(
+        HELMHOLTZ_msRRHO_internal_energy_treatment)
 
 
 def test_msRRHO_converge_to_harmonic():
