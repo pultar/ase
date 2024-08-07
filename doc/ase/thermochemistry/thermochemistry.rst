@@ -7,19 +7,35 @@ Thermochemistry
 
 ASE contains a :mod:`~ase.thermochemistry` module that lets the user derive
 commonly desired thermodynamic quantities of molecules and crystalline solids
-from ASE output and some user-specified parameters. Four cases are currently
-handled by this module: the ideal-gas limit (in which translational and
-rotational degrees of freedom are taken into account), the harmonic limit
-(generally used for adsorbates, in which all degrees of freedom are treated
-harmonically), the hindered translator / hindered rotor model (used for
-adsorbates, in which two degrees of freedom are translational, one is
-rotational, and the remaining 3N-3 are vibrational), and a crystalline solid
-model (in which a lattice of N atoms is treated as a system of 3N independent
-harmonic oscillators). The first three cases rely on good vibrational energies
+from ASE output and some user-specified parameters. The following classes are
+currently available in this module:
+
+* The ideal-gas limit (in which translational and
+  rotational degrees of freedom are taken into account), the harmonic limit
+  (generally used for adsorbates, in which all degrees of freedom are treated
+  harmonically). See :class:`~ase.thermochemistry.IdealGasThermo`.
+* The hindered translator / hindered rotor model (used for
+  adsorbates, in which two degrees of freedom are translational, one is
+  rotational, and the remaining 3N-3 are vibrational). See
+  :class:`~ase.thermochemistry.HinderedThermo`.
+* A crystalline solid model (in which a lattice of N atoms is treated as
+  a system of 3N independent harmonic oscillators). See
+  :class:`~ase.thermochemistry.CrystalThermo`.
+
+All non-periodic classes rely on good vibrational energies
 being fed to the calculators, which can be calculated with the
 :mod:`~ase.vibrations` module. Likewise, the crystalline solid model depends on
 an accurate phonon density of states; this is readily calculated using the
 :mod:`~ase.phonons` module.
+
+ASE uses an approach, in which each individual vibrational mode is represented
+by an instance of an :class:`~ase.thermochemistry.AbstractMode` class. This
+class is a base class for the different types of modes (e.g.
+:class:`~ase.thermochemistry.HarmonicMode`
+or :class:`~ase.thermochemistry.RRHOMode`). The Thermochemistry classes then
+create a list of these modes and use them to calculate the thermodynamic
+properties. The user can also create their own modes by creating their own
+list of modes. Note, that not all Thermochemistry classes make use of this yet.
 
 
 Ideal-gas limit
@@ -256,6 +272,13 @@ the enthalpy and entropy:
 .. math ::
    G(T,P) = H(T) - T\, S(T,P)
 
+.. note::
+   Note, that in comparison to other implementations the following can play a role:
+
+   * The reference pressure used in ASE is 1.0e5 Pa (1 bar). Other codes might use 1.0 atm. This can lead to small differences in the calculated ideal entropy contributions. You can manually overwrite the value of the reference pressure in the :class:`BaseThermoChem` instances and its subclasses by setting :attr:`BaseThermoChem.referencepressure` after initialization.
+   * ASE uses the masses of the atoms object. These might be slightly different from the masses used in other codes. You can overwrite them in the Atoms object.
+   * Some codes use an average inertia of `B_\text{av}=10^{-44}` kg m\ :sup:`2` as in :doi:`10.1002/chem.201200497`, ASE calculates the real mean inertia by calling :func:`~ase.Atoms.get_moments_of_inertia`.
+
 Harmonic limit
 --------------
 
@@ -434,3 +457,22 @@ internal energy, the entropy and the Helmholtz free energy.
 
 .. math ::
    F(T) = U(T) - T\, S(T,P)
+
+Abstract Base Classes
+=====================
+
+.. autoclass:: AbstractMode
+   :members:
+
+.. autoclass:: BaseThermoChem
+   :members:
+
+
+Individual Mode Classes
+=======================
+
+.. autoclass:: HarmonicMode
+   :members:
+
+.. autoclass:: RRHOMode
+   :members:
