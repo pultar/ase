@@ -5,7 +5,7 @@ import os
 import sys
 from abc import ABC, abstractmethod
 from typing import Dict, Literal, Optional, Sequence, Tuple, Union
-from warnings import warn
+from warnings import catch_warnings, simplefilter, warn
 
 import numpy as np
 
@@ -278,6 +278,35 @@ class BaseThermoChem(ABC):
         if modes:
             self.modes = modes
         self.spin = spin
+
+    @classmethod
+    def from_transition_state(cls, vib_energies: Sequence[complex],
+                              *args, **kwargs) -> "BaseThermoChem":
+        """Create a new instance for a transition state.
+
+        This will work just as the standard constructor, but will remove
+        one imaginary frequency from the given vib_energies first.
+        If there is more than one imaginary frequency, an error will be raised.
+
+        Returns
+        -------
+        BaseThermoChem instance
+        """
+
+        if sum(np.iscomplex(vib_energies)):
+            # supress user warning
+            with catch_warnings():
+                simplefilter("ignore")
+                vib_energies, n_imag = _clean_vib_energies(vib_energies,
+                                                            handling='remove')
+            if n_imag != 1:
+                raise ValueError("Not exactly one imaginary frequency found.")
+        else:
+            raise ValueError("No imaginary frequencies found in vib_energies.")
+
+        thermo = cls(vib_energies, *args, **kwargs)
+
+        return thermo
 
     @staticmethod
     def combine_contributions(

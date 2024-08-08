@@ -28,6 +28,10 @@ being fed to the calculators, which can be calculated with the
 an accurate phonon density of states; this is readily calculated using the
 :mod:`~ase.phonons` module.
 
+If you want to calculate the thermodynamic properties of a transition state, you
+can use the alternative constructor :func:`BaseThermoChem.from_transition_state`
+to create an instance and automatically removing a single imaginary frequency.
+
 ASE uses an approach, in which each individual vibrational mode is represented
 by an instance of an :class:`~ase.thermochemistry.AbstractMode` class. This
 class is a base class for the different types of modes (e.g.

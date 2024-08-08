@@ -184,6 +184,22 @@ def test_ideal_gas_thermo_ch3_v3(testdir):
         # Imaginary frequencies present!!!
         thermo = ideal_gas_thermo_ch3(vib_energies=vib_energies)
 
+    with pytest.raises(ValueError):
+        # more than one imaginary mode present
+        thermo = IdealGasThermo.from_transition_state(vib_energies)
+    # this one should work with one imaginary mode
+    tmp = [vib_energies[3]] + vib_energies[7:]
+    thermo = IdealGasThermo.from_transition_state(tmp,
+                                                    geometry="nonlinear",
+                                                    atoms=None,
+                                                    symmetrynumber=6,
+                                                    potentialenergy=0.0,
+                                                    spin=0.5,
+                                                    imag_modes_handling='error')
+    # the same should not work when directly creating the class
+    with pytest.raises(ValueError):
+        thermo = ideal_gas_thermo_ch3(vib_energies=tmp)
+
     # Same as above, but let's try ignoring the
     # imag modes. This should just use: 507.9, 547.2, 547.7
     with pytest.warns(UserWarning):
