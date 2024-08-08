@@ -4,8 +4,7 @@ outputs."""
 import os
 import sys
 from warnings import warn
-from typing import Dict, Sequence, Literal, Optional, Tuple, Type, Union
-from numbers import Real
+from typing import Dict, Literal, Optional, Sequence, Tuple, Union
 from abc import ABC, abstractmethod
 
 import numpy as np
@@ -16,6 +15,7 @@ from ase import units, Atoms
 _IMAG_MODES_OPTIONS = Literal['remove', 'error', 'invert', 'raise']
 _GEOMETRY_OPTIONS = Literal['linear', 'nonlinear', 'monatomic']
 _FLOAT_OR_FLOATWITHDICT = Union[float, Tuple[float, Dict[str, float]]]
+_FLOATWITHDICT = Tuple[float, Dict[str, float]]
 
 
 def _sum_contributions(contrib_dicts: Dict[str, float]) -> float:
@@ -42,7 +42,7 @@ class AbstractMode(ABC):
 
     @abstractmethod
     def get_entropy(self, temperature: float,
-                        contributions: bool) -> _FLOAT_OR_FLOATWITHDICT:
+                    contributions: bool) -> _FLOAT_OR_FLOATWITHDICT:
         raise NotImplementedError
 
     def get_ZPE_correction(self) -> float:
@@ -278,8 +278,7 @@ class BaseThermoChem(ABC):
             self.atoms = atoms
         if modes:
             self.modes = modes
-        if spin:
-            self.spin = spin
+        self.spin = spin
 
     @staticmethod
     def combine_contributions(
@@ -311,6 +310,7 @@ class BaseThermoChem(ABC):
 
     @abstractmethod
     def get_entropy(self, temperature: float,
+                    pressure: float = units.bar,
                     verbose: bool = True) -> float:
         raise NotImplementedError
 
@@ -461,7 +461,7 @@ class BaseThermoChem(ABC):
             geometry: Optional[_GEOMETRY_OPTIONS] = None,
             electronic: bool = False,
             pressure: Optional[float] = None,
-            symmetrynumber: Optional[int] = None) -> _FLOAT_OR_FLOATWITHDICT:
+            symmetrynumber: Optional[int] = None) -> _FLOATWITHDICT:
         """Returns the entropy, in eV/K and a dict of the contributions"""
 
         if (geometry in ['linear', 'nonlinear']) and (symmetrynumber is None):
@@ -472,11 +472,11 @@ class BaseThermoChem(ABC):
             raise ValueError(
                 'Atoms object required for ideal entropy calculation.')
 
-        if electronic and (not hasattr(self, 'spin')):
+        if electronic and (self.spin is None):
             raise ValueError(
                 'Spin value required for electronic entropy calculation.')
 
-        S = 0.0
+        S: float = 0.0
         ret = {}
 
         if translation:
@@ -514,14 +514,16 @@ class BaseThermoChem(ABC):
 
         # Electronic entropy.
         if electronic:
+            assert self.spin is not None  # for mypy, error is raised above
             S_e = units.kB * np.log(2 * self.spin + 1)
             S += S_e
             ret['S_e'] = S_e
 
         # Vibrational entropy
         if vibration:
-            S_v: float = self.get_vib_entropy_contribution(temperature,
-                                                           return_list=False)
+            S_v = self.get_vib_entropy_contribution(temperature,
+                                                    return_list=False)
+            assert isinstance(S_v, float)  # make mypy happy
             S += S_v
             ret['S_v'] = S_v
 
@@ -603,7 +605,9 @@ class HarmonicThermo(BaseThermoChem):
 
         return U
 
-    def get_entropy(self, temperature: float, verbose: bool = True) -> float:
+    def get_entropy(self, temperature: float,
+                    pressure: float = units.bar,
+                    verbose: bool = True) -> float:
         """Returns the entropy, in eV/ at a specified temperature (K)."""
 
         self.verbose = verbose
@@ -941,7 +945,9 @@ class HinderedThermo(BaseThermoChem):
         zpe = zpe_t + zpe_r + zpe_v
         return zpe
 
-    def get_entropy(self, temperature, verbose=True):
+    def get_entropy(self, temperature,
+                    pressure=units.bar,
+                    verbose=True):
         """Returns the entropy, in eV/K, in the hindered translator
         and hindered rotor model at a specified temperature (K)."""
 
@@ -1173,7 +1179,7 @@ class IdealGasThermo(BaseThermoChem):
         return H
 
     def get_entropy(self, temperature: float,
-                    pressure: float,
+                    pressure: float = units.bar,
                     verbose: bool = True) -> float:
         """Returns the entropy, in eV/K, in the ideal gas approximation
         at a specified temperature (K) and pressure (Pa)."""
@@ -1185,19 +1191,18 @@ class IdealGasThermo(BaseThermoChem):
         self.verbose = verbose
         vprint = self._vprint
         fmt = '%-15s%13.7f eV/K%13.3f eV'
-        vprint('Entropy components at T = %.2f K and P = %.1f Pa:' %
-               (temperature, pressure))
+        vprint(f'Entropy components at T = {temperature:.2f} K and'
+               f' P = {pressure:.1f} Pa:')
         vprint('=' * 49)
-        vprint('%15s%13s     %13s' % ('', 'S', 'T*S'))
-
+        vprint('{"":15s}{"S":13s}     {"T*S:13s}')
         S, S_dict = self.get_ideal_entropy(temperature,
-                                            translation=True,
-                                            vibration=True,
-                                            rotation=True,
-                                            geometry=self.geometry,
-                                            electronic=True,
-                                            pressure=pressure,
-                                            symmetrynumber=self.sigma)
+                                           translation=True,
+                                           vibration=True,
+                                           rotation=True,
+                                           geometry=self.geometry,
+                                           electronic=True,
+                                           pressure=pressure,
+                                           symmetrynumber=self.sigma)
 
         vprint(
             fmt %
@@ -1229,7 +1234,7 @@ class IdealGasThermo(BaseThermoChem):
 
         H = self.get_enthalpy(temperature, verbose=verbose)
         vprint('')
-        S = self.get_entropy(temperature, pressure, verbose=verbose)
+        S = self.get_entropy(temperature, pressure=pressure, verbose=verbose)
         G = H - temperature * S
 
         vprint('')
@@ -1436,11 +1441,10 @@ def _clean_vib_energies(vib_energies: Sequence[complex],
     n_imag : int
         the number of imaginary frequencies treated.
     """
-    ret: Sequence[float] = []
     if handling.lower() == 'remove':
         n_vib_energies = len(vib_energies)
-        ret = [float(v.real) for v in vib_energies if np.real(v) > 0]
-        n_imag = n_vib_energies - len(ret)
+        vib_energies = [v for v in vib_energies if np.real(v) > 0]
+        n_imag = n_vib_energies - len(vib_energies)
         if n_imag > 0:
             warn(f"{n_imag} imag modes removed", UserWarning)
     elif handling.lower() == 'error':
@@ -1449,14 +1453,14 @@ def _clean_vib_energies(vib_energies: Sequence[complex],
         n_imag = 0
     elif handling.lower() == 'invert':
         n_imag = sum(np.iscomplex(vib_energies))
-        ret = [np.imag(v) if np.iscomplex(v)
-                        else float(v.real) for v in vib_energies]
+        vib_energies = [np.imag(v) if np.iscomplex(v)
+                        else v for v in vib_energies]
     elif handling.lower() == 'raise':
         if value is None:
             raise ValueError("Value must be specified when handling='raise'.")
         n_imag = sum(np.iscomplex(vib_energies))
-        ret = [value if np.iscomplex(v)
-                        else float(v.real) for v in vib_energies]
+        vib_energies = [value if np.iscomplex(v)
+                        else v for v in vib_energies]
     else:
         raise ValueError(f"Unknown handling option: {handling}")
     ret = np.real(vib_energies).tolist()  # clear +0.j
