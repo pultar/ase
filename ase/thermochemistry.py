@@ -461,7 +461,35 @@ class BaseThermoChem(ABC):
             electronic: bool = False,
             pressure: Optional[float] = None,
             symmetrynumber: Optional[int] = None) -> _FLOATWITHDICT:
-        """Returns the entropy, in eV/K and a dict of the contributions"""
+        """Returns the entropy, in eV/K and a dict of the contributions.
+
+        Parameters
+        ----------
+        temperature : float
+            The temperature in Kelvin.
+        translation : bool
+            Include translational entropy.
+        vibration : bool
+            Include vibrational entropy.
+        rotation : bool
+            Include rotational entropy.
+        geometry : str
+            The geometry of the molecule. Options are 'nonlinear',
+            'linear', and 'monatomic'.
+        electronic : bool
+            Include electronic entropy.
+        pressure : float
+            The pressure in Pa. Only needed for the translational entropy.
+        symmetrynumber : int
+            The symmetry number of the molecule. Only needed for linear and
+            nonlinear molecules.
+
+        Returns
+        -------
+        Tuple of one float and one dict
+        The float is the total entropy in eV/K.
+        The dict contains the contributions to the entropy.
+        """
 
         if (geometry in ['linear', 'nonlinear']) and (symmetrynumber is None):
             raise ValueError(
@@ -534,6 +562,10 @@ class HarmonicThermo(BaseThermoChem):
     that all degrees of freedom are treated harmonically. Often used for
     adsorbates.
 
+    Note: This class not include the translational and rotational
+    contributions to the entropy by default. Use the get_ideal_entropy method
+    for that and add them manually.
+
     Inputs:
 
     vib_energies : list
@@ -558,6 +590,10 @@ class HarmonicThermo(BaseThermoChem):
     raise_to : float
         The value to which imaginary frequencies will be
         raised, if *imag_modes_handling* is 'raise'.
+    modes : list of AbstractMode
+        A list of mode objects. If not provided, :class:`HarmonicMode` objects
+        will be created from the vib_energies. This is useful if you want to
+        replace individual modes with non-harmonic modes.
     """
 
     def __init__(self, vib_energies: Sequence[complex],
@@ -607,7 +643,25 @@ class HarmonicThermo(BaseThermoChem):
     def get_entropy(self, temperature: float,
                     pressure: float = units.bar,
                     verbose: bool = True) -> float:
-        """Returns the entropy, in eV/ at a specified temperature (K)."""
+        """Returns the entropy, in eV/K at a specified temperature (K).
+
+        Note: This does not include the translational and rotational
+        contributions to the entropy. Use the get_ideal_entropy method
+        for that.
+
+        Parameters
+        ----------
+        temperature : float
+            The temperature in Kelvin.
+        pressure : float
+            Not used, but kept for compatibility with other classes.
+        verbose : bool
+            If True, print the contributions to the entropy.
+
+        Returns
+        -------
+        float
+        """
 
         self.verbose = verbose
         vprint = self._vprint
@@ -656,10 +710,14 @@ class QuasiHarmonicThermo(HarmonicThermo):
     """Subclass of :class:`HarmonicThermo`, including the quasi-harmonic
     approximation of Cramer, Truhlar and coworkers :doi:`10.1021/jp205508z`.
 
+    Note: This class not include the translational and rotational
+    contributions to the entropy by default. Use the get_ideal_entropy method
+    for that and add them manually.
+
     Inputs:
 
     vib_energies : list
-        a list of the harmonic energies of the adsorbate (e.g., from
+        a list of the energies of the vibrations (e.g., from
         ase.vibrations.Vibrations.get_energies). The number of
         energies should match the number of degrees of freedom of the
         adsorbate; i.e., 3*n, where n is the number of atoms. Note that
@@ -677,6 +735,10 @@ class QuasiHarmonicThermo(HarmonicThermo):
         If 'invert', the imaginary frequencies will be multiplied by -i.
         If 'raise', the imaginary frequencies will be raised to a
         certain value, specified by the *raise_to* keyword.
+    modes : list of AbstractMode
+        A list of mode objects. If not provided, :class:`HarmonicMode` objects
+        will be created from the raised vib_energies. This is useful if you want
+        to replace individual modes with non-harmonic modes.
     raise_to : float
         The value to which all frequencies smaller than this value will be
         raised. If *imag_modes_handling* is 'raise' this also applies to
@@ -715,8 +777,23 @@ class MSRRHOThermo(QuasiHarmonicThermo):
     including Grimme's scaling method based on
     :doi:`10.1002/chem.201200497` and :doi:`10.1039/D1SC00621E`.
 
+    Note: This class not include the translational and rotational
+    contributions to the entropy by default. Use the get_ideal_entropy method
+    for that and add them manually.
+
+    We enforce treating imaginary modes as Grimme suggests (converting
+    them to real by multiplying them with :math:`-i`). So make sure to check
+    your input energies.
+
     Inputs:
 
+    vib_energies : list
+        a list of the energies of the vibrations (e.g., from
+        ase.vibrations.Vibrations.get_energies). The number of
+        energies should match the number of degrees of freedom of the
+        adsorbate; i.e., 3*n, where n is the number of atoms. Note that
+        this class does not check that the user has supplied the correct
+        number of energies. Units of energies are eV.
     atoms: an ASE atoms object
         used to calculate rotational moments of inertia and molecular mass
     tau : float
@@ -737,9 +814,11 @@ class MSRRHOThermo(QuasiHarmonicThermo):
         the entropy contribution as in Grimmmes paper is considered.
         If true, the approach of Otlyotov and Minenkov
         :doi:`10.1002/jcc.27129` is used.
+    modes : list of AbstractMode
+        A list of mode objects. If not provided, :class:`RRHOMode` objects will
+        be created from the raised vib_energies. This is useful if you want to
+        replace individual modes with non-harmonic modes.
 
-    We enforce treating imaginary modes as Grimme suggests (converting
-    them to real by multiplying them with :math:`-i`).
     """
 
     def __init__(self, vib_energies: Sequence[complex], atoms: Atoms,

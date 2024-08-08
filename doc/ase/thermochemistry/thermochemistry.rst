@@ -81,7 +81,11 @@ with the .get_energies() method of :class:`ase.vibrations.Vibrations`, but
 the user should take care that all of these energies are real
 (non-imaginary). If imaginary values are encountered, by default an error is
 raised. By setting ``imag_modes_handling`` to either 'remove' or 'invert', the
-imaginary modes can be deleted or multiplied by `-i`, respectively.
+imaginary modes can be deleted or multiplied by `-i`, respectively. Note, that
+the :class:`HarmonicThermo` class does not calculate
+`S_\text{trans}`, `S_\text{rot}` and `S_\text{elec}`. If these are desired,
+the user should calculate them separately and add them to the entropy. Use the
+functions :func:`BaseThermoChem.get_ideal_entropy` for that purpose.
 The class :class:`HarmonicThermo` has the interface described below.
 
 .. autoclass:: HarmonicThermo
@@ -461,12 +465,11 @@ internal energy, the entropy and the Helmholtz free energy.
 Abstract Base Classes
 =====================
 
-.. autoclass:: AbstractMode
-   :members:
-
 .. autoclass:: BaseThermoChem
    :members:
 
+.. autoclass:: AbstractMode
+   :members:
 
 Individual Mode Classes
 =======================
