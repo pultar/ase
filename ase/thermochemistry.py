@@ -3,14 +3,13 @@ outputs."""
 
 import os
 import sys
-from warnings import warn
-from typing import Dict, Literal, Optional, Sequence, Tuple, Union
 from abc import ABC, abstractmethod
+from typing import Dict, Literal, Optional, Sequence, Tuple, Union
+from warnings import warn
 
 import numpy as np
 
-from ase import units, Atoms
-
+from ase import Atoms, units
 
 _IMAG_MODES_OPTIONS = Literal['remove', 'error', 'invert', 'raise']
 _GEOMETRY_OPTIONS = Literal['linear', 'nonlinear', 'monatomic']

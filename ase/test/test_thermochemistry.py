@@ -11,8 +11,8 @@ from ase.thermochemistry import (
     HarmonicThermo,
     HinderedThermo,
     IdealGasThermo,
+    MSRRHOThermo,
     QuasiHarmonicThermo,
-    MSRRHOThermo
 )
 from ase.vibrations import Vibrations
 
