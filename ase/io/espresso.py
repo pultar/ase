@@ -257,10 +257,17 @@ def read_espresso_out(fileobj, index=slice(None), results_required=True):
         magmoms = None
         for magmoms_index in indexes[_PW_MAGMOM]:
             if image_index < magmoms_index < next_index:
-                magmoms = [
-                    float(mag_line.split()[-1]) for mag_line
-                    in pwo_lines[magmoms_index + 1:
-                                 magmoms_index + 1 + len(structure)]]
+                espresso_version = float(pwo_lines[image_index].split()[2][2:5])
+                if espresso_version < 6.8:
+                    magmoms = [
+                        float(mag_line.split()[5]) for mag_line
+                        in pwo_lines[magmoms_index + 1:
+                                     magmoms_index + 1 + len(structure)]]
+                else:
+                    magmoms = [
+                        float(mag_line.split()[-1]) for mag_line
+                        in pwo_lines[magmoms_index + 1:
+                                    magmoms_index + 1 + len(structure)]]
 
         # Dipole moment
         dipole = None
