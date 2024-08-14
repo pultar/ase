@@ -258,10 +258,11 @@ def read_espresso_out(fileobj, index=slice(None), results_required=True):
         for magmoms_index in indexes[_PW_MAGMOM]:
             if image_index < magmoms_index < next_index:
                 magmoms = [
-                        float(re.search(r"magn.\s+(-?\d+\.\d+)", mag_line).group(1)) for mag_line
-                        in pwo_lines[magmoms_index + 1:
-                                     magmoms_index + 1 + len(structure)]]
-    
+                    float(re.search(r"magn.\s+(-?\d+\.\d+)",
+                                    mag_line).group(1))
+                    for mag_line in pwo_lines[magmoms_index + 1:
+                                        magmoms_index + 1 + len(structure)]]
+
         # Dipole moment
         dipole = None
         if indexes[_PW_DIPOLE]:
