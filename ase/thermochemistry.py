@@ -11,7 +11,8 @@ import numpy as np
 
 from ase import Atoms, units
 
-_IMAG_MODES_OPTIONS = Literal['remove', 'error', 'invert', 'raise']
+_IMAG_MODES_OPTIONS = Union[Literal['remove', 'error', 'invert', 'raise'],
+                            float]
 _GEOMETRY_OPTIONS = Literal['linear', 'nonlinear', 'monatomic']
 _FLOAT_OR_FLOATWITHDICT = Union[float, Tuple[float, Dict[str, float]]]
 _FLOATWITHDICT = Tuple[float, Dict[str, float]]
@@ -88,7 +89,20 @@ class HarmonicMode(AbstractMode):
                     temperature: float,
                     contributions: bool) -> _FLOAT_OR_FLOATWITHDICT:
         """Returns the entropy in the harmonic approximation at a specified
-        temperature (K)."""
+        temperature (K).
+
+        Parameters
+        ----------
+        temperature : float
+            The temperature in Kelvin.
+        contributions : bool
+            If True, return the contributions to the entropy as a dict too.
+            Here it will only contain the vibrational entropy.
+
+        Returns
+        -------
+        float or Tuple[float, Dict[str, float]]
+        """
         ret = {}
         ret['S_v'] = self.get_vib_entropy_contribution(temperature)
         if contributions:
@@ -353,7 +367,8 @@ class BaseThermoChem(ABC):
         """For backwards compatibility, raise a deprecation warning."""
         warn(
             "The vib_energies attribute is deprecated and will be removed in a"
-            "future release. Please use the modes attribute instead.",
+            "future release. Please use the modes attribute instead."
+            "Setting this outside the constructor will not update the modes.",
             DeprecationWarning)
         self._vib_energies = value
 
@@ -368,7 +383,8 @@ class BaseThermoChem(ABC):
         """For backwards compatibility, raise a deprecation warning."""
         warn(
             "The imag_modes_handling attribute is deprecated and will be "
-            "removed in a future release. Please use the raise_to attribute",
+            "removed in a future release. Please use the constructor argument"
+            "Setting this outside the constructor will not update the modes.",
             DeprecationWarning)
         self._imag_modes_handling = value
 
@@ -591,7 +607,7 @@ class HarmonicThermo(BaseThermoChem):
     that all degrees of freedom are treated harmonically. Often used for
     adsorbates.
 
-    Note: This class not include the translational and rotational
+    Note: This class does not include the translational and rotational
     contributions to the entropy by default. Use the get_ideal_entropy method
     for that and add them manually.
 
@@ -608,17 +624,14 @@ class HarmonicThermo(BaseThermoChem):
         the potential energy in eV (e.g., from atoms.get_potential_energy)
         (if potentialenergy is unspecified, then the methods of this
         class can be interpreted as the energy corrections)
-    imag_modes_handling : string
+    imag_modes_handling : string or float
         If 'remove', any imaginary frequencies will be removed in the
         calculation of the thermochemical properties.
         If 'error' (default), an error will be raised if any imaginary
         frequencies are present.
         If 'invert', the imaginary frequencies will be multiplied by -i.
-        If 'raise', the imaginary frequencies will be raised to a
-        certain value, specified by the *raise_to* keyword.
-    raise_to : float
-        The value to which imaginary frequencies will be
-        raised, if *imag_modes_handling* is 'raise'.
+        If given a float, the imaginary frequencies will be raised to this
+        value. Unit is eV!
     modes : list of AbstractMode
         A list of mode objects. If not provided, :class:`HarmonicMode` objects
         will be created from the vib_energies. This is useful if you want to
@@ -628,13 +641,11 @@ class HarmonicThermo(BaseThermoChem):
     def __init__(self, vib_energies: Sequence[complex],
                  potentialenergy: float = 0.,
                  imag_modes_handling: _IMAG_MODES_OPTIONS = 'error',
-                 raise_to: Optional[float] = None,
                  modes: Optional[Sequence[AbstractMode]] = None) -> None:
 
         # Check for imaginary frequencies.
         vib_energies, n_imag = _clean_vib_energies(
-            vib_energies, handling=imag_modes_handling,
-            value=raise_to
+            vib_energies, handling=imag_modes_handling
         )
         if modes is None:
             modes = [HarmonicMode(energy) for energy in vib_energies]
@@ -762,17 +773,15 @@ class QuasiHarmonicThermo(HarmonicThermo):
         If 'error' (default), an error will be raised if any imaginary
         frequencies are present.
         If 'invert', the imaginary frequencies will be multiplied by -i.
-        If 'raise', the imaginary frequencies will be raised to a
-        certain value, specified by the *raise_to* keyword.
+        If given a float, the imaginary frequencies will be raised to this
+        value. Unit is eV!
     modes : list of AbstractMode
         A list of mode objects. If not provided, :class:`HarmonicMode` objects
         will be created from the raised vib_energies. This is useful if you want
         to replace individual modes with non-harmonic modes.
     raise_to : float
         The value to which all frequencies smaller than this value will be
-        raised. If *imag_modes_handling* is 'raise' this also applies to
-        imaginary frequencies. Unit is eV. Defaults to
-        :math:`100cm^{-1} = 0.012398 eV`.
+        raised. Unit is eV. Defaults to :math:`100cm^{-1} = 0.012398 eV`.
 
     """
 
@@ -788,8 +797,7 @@ class QuasiHarmonicThermo(HarmonicThermo):
 
         # Check for imaginary frequencies.
         vib_energies, n_imag = _clean_vib_energies(
-            vib_energies, handling=imag_modes_handling,
-            value=raise_to
+            vib_energies, handling=imag_modes_handling
         )
         # raise the low frequencies to a certain value
         self._vib_energies = self._raise(vib_energies, raise_to)
@@ -797,7 +805,6 @@ class QuasiHarmonicThermo(HarmonicThermo):
             modes = [HarmonicMode(energy) for energy in self.vib_energies]
         super().__init__(self.vib_energies, potentialenergy=potentialenergy,
                          imag_modes_handling=imag_modes_handling,
-                         raise_to=raise_to,
                          modes=modes)
 
 
@@ -933,6 +940,8 @@ class HinderedThermo(BaseThermoChem):
         are present after the 3N-3 cut.
         If 'invert', the imaginary frequencies after the 3N-3 cut will be
         multiplied by -i.
+        If given a float, the imaginary frequencies will be raised to this
+        value. Unit is eV!
     """
 
     def __init__(self, vib_energies, trans_barrier_energy, rot_barrier_energy,
@@ -1183,6 +1192,8 @@ class IdealGasThermo(BaseThermoChem):
         are present after the 3N-5/3N-6 cut.
         If 'invert', the imaginary frequencies after the 3N-5/3N-6 cut will be
         multiplied by -i.
+        If given a float, the imaginary frequencies will be raised to this
+        value. Unit is eV!
 
     """
 
@@ -1514,8 +1525,7 @@ class CrystalThermo(BaseThermoChem):
 
 
 def _clean_vib_energies(vib_energies: Sequence[complex],
-                        handling: _IMAG_MODES_OPTIONS = 'error',
-                        value: Optional[float] = None
+                        handling: _IMAG_MODES_OPTIONS = 'error'
                         ) -> Tuple[Sequence[float], int]:
     """Checks and deal with the presence of imaginary vibrational modes
 
@@ -1532,13 +1542,9 @@ def _clean_vib_energies(vib_energies: Sequence[complex],
         frequencies are present.
         If 'invert', the imaginary part of the frequencies will be
         multiplied by -i. See :doi:`10.1002/anie.202205735.`
-        If 'raise', all imaginary frequencies will be replaced with the value
-        specified by the 'value' argument. See Cramer, Truhlar and coworkers.
+        If given a float, the imaginary frequencies will be raised to this
+        value. Unit is eV! See Cramer, Truhlar and coworkers.
         :doi:`10.1021/jp205508z`.
-
-    value : float
-        Value to which imaginary frequencies will be raised when
-        handling='raise'.
 
     Outputs:
 
@@ -1548,7 +1554,12 @@ def _clean_vib_energies(vib_energies: Sequence[complex],
     n_imag : int
         the number of imaginary frequencies treated.
     """
-    if handling.lower() == 'remove':
+    # raise to a value, accept int and float in contrast to documentation
+    if isinstance(handling, (int, float)):
+        n_imag = sum(np.iscomplex(vib_energies))
+        vib_energies = [handling if np.iscomplex(v)
+                        else v for v in vib_energies]
+    elif handling.lower() == 'remove':
         n_vib_energies = len(vib_energies)
         vib_energies = [v for v in vib_energies if np.real(v) > 0]
         n_imag = n_vib_energies - len(vib_energies)
@@ -1561,12 +1572,6 @@ def _clean_vib_energies(vib_energies: Sequence[complex],
     elif handling.lower() == 'invert':
         n_imag = sum(np.iscomplex(vib_energies))
         vib_energies = [np.imag(v) if np.iscomplex(v)
-                        else v for v in vib_energies]
-    elif handling.lower() == 'raise':
-        if value is None:
-            raise ValueError("Value must be specified when handling='raise'.")
-        n_imag = sum(np.iscomplex(vib_energies))
-        vib_energies = [value if np.iscomplex(v)
                         else v for v in vib_energies]
     else:
         raise ValueError(f"Unknown handling option: {handling}")

@@ -182,11 +182,11 @@ def test_ideal_gas_thermo_ch3_v3(testdir):
     ]
     with pytest.raises(ValueError):
         # Imaginary frequencies present!!!
-        thermo = ideal_gas_thermo_ch3(vib_energies=vib_energies)
+        ideal_gas_thermo_ch3(vib_energies=vib_energies)
 
     with pytest.raises(ValueError):
         # more than one imaginary mode present
-        thermo = IdealGasThermo.from_transition_state(vib_energies)
+        IdealGasThermo.from_transition_state(vib_energies)
     # this one should work with one imaginary mode
     tmp = [vib_energies[3]] + vib_energies[7:]
     thermo = IdealGasThermo.from_transition_state(tmp,
@@ -198,7 +198,7 @@ def test_ideal_gas_thermo_ch3_v3(testdir):
                                                     imag_modes_handling='error')
     # the same should not work when directly creating the class
     with pytest.raises(ValueError):
-        thermo = ideal_gas_thermo_ch3(vib_energies=tmp)
+        ideal_gas_thermo_ch3(vib_energies=tmp)
 
     # Same as above, but let's try ignoring the
     # imag modes. This should just use: 507.9, 547.2, 547.7
@@ -331,7 +331,7 @@ HELMHOLTZ_QUASI_HARMONIC = -0.04644196376152279
 def quasi_harmonic_thermo(
     vib_energies=None,
     potentialenergy=0.0,
-    imag_modes_handling='raise',
+    imag_modes_handling=100 * units.invcm,
     raise_to=100 * units.invcm
 ):
     return QuasiHarmonicThermo(
@@ -359,8 +359,7 @@ def test_quasi_harmonic_thermo_convergence():
     # now also test that it actually changes when a higher value is used
     thermo_quasi = quasi_harmonic_thermo(raise_to=1000 * units.invcm)
     helmholtz_quasi = thermo_quasi.get_helmholtz_energy(temperature=298.15)
-    with pytest.raises(AssertionError):
-        assert helmholtz_harm == pytest.approx(helmholtz_quasi)
+    assert helmholtz_harm != pytest.approx(helmholtz_quasi)
 
 
 def msRRHO_thermo(
@@ -408,8 +407,7 @@ def test_msRRHO_converge_to_harmonic():
     # now also test that it actually changes when a higher tau is used
     thermo_msrrho = msRRHO_thermo(atoms=Atoms('H'), tau=10)
     helmholtz_msrrho = thermo_msrrho.get_helmholtz_energy(temperature=298.15)
-    with pytest.raises(AssertionError):
-        assert helmholtz_harm == pytest.approx(helmholtz_msrrho)
+    assert helmholtz_harm != pytest.approx(helmholtz_msrrho)
 
 
 def test_msRRHO_scaling():
