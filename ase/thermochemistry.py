@@ -281,11 +281,14 @@ class BaseThermoChem(ABC):
     calculations."""
 
     def __init__(self,
-                 vib_energies: Sequence[float],
+                 vib_energies: Optional[Sequence[float]] = None,
                  atoms: Optional[Atoms] = None,
                  modes: Optional[Sequence[AbstractMode]] = None,
                  spin: Optional[float] = None) -> None:
-        self._vib_energies = vib_energies
+        if vib_energies is None and modes is None:
+            raise ValueError("Either vib_energies or modes must be provided.")
+        if vib_energies:
+            self._vib_energies = vib_energies
         self.referencepressure = 1.0e5  # Pa
         if atoms:
             self.atoms = atoms
@@ -358,9 +361,18 @@ class BaseThermoChem(ABC):
 
     @property
     def vib_energies(self) -> Sequence[float]:
-        """For backwards compatibility.
-            Delete the following after some time."""
-        return self._vib_energies
+        """Get the vibrational energies in eV.
+
+        For backwards compatibility, this will return the modes' energies if
+        they are available. Otherwise, it will return the stored vib_energies.
+        """
+        # build from modes if available
+        if hasattr(self, 'modes'):
+            return [mode.energy for mode in self.modes]
+        elif hasattr(self, '_vib_energies'):
+            return self._vib_energies
+        else:
+            raise AttributeError("No vibrational energies available.")
 
     @vib_energies.setter
     def vib_energies(self, value: Sequence[float]) -> None:
@@ -368,7 +380,7 @@ class BaseThermoChem(ABC):
         warn(
             "The vib_energies attribute is deprecated and will be removed in a"
             "future release. Please use the modes attribute instead."
-            "Setting this outside the constructor will not update the modes.",
+            "Setting this outside the constructor will not update the modes",
             DeprecationWarning)
         self._vib_energies = value
 
@@ -619,7 +631,8 @@ class HarmonicThermo(BaseThermoChem):
         energies should match the number of degrees of freedom of the
         adsorbate; i.e., 3*n, where n is the number of atoms. Note that
         this class does not check that the user has supplied the correct
-        number of energies. Units of energies are eV.
+        number of energies. Units of energies are eV. Note, that if 'modes'
+        are given, these energies are not used.
     potentialenergy : float
         the potential energy in eV (e.g., from atoms.get_potential_energy)
         (if potentialenergy is unspecified, then the methods of this
@@ -649,7 +662,7 @@ class HarmonicThermo(BaseThermoChem):
         )
         if modes is None:
             modes = [HarmonicMode(energy) for energy in vib_energies]
-        super().__init__(vib_energies, modes=modes)
+        super().__init__(modes=modes)
 
         self.n_imag = n_imag
 
@@ -800,10 +813,11 @@ class QuasiHarmonicThermo(HarmonicThermo):
             vib_energies, handling=imag_modes_handling
         )
         # raise the low frequencies to a certain value
-        self._vib_energies = self._raise(vib_energies, raise_to)
+        vib_energies = self._raise(vib_energies, raise_to)
         if modes is None:
-            modes = [HarmonicMode(energy) for energy in self.vib_energies]
-        super().__init__(self.vib_energies, potentialenergy=potentialenergy,
+            modes = [HarmonicMode(energy) for energy in vib_energies]
+        super().__init__(vib_energies,
+                         potentialenergy=potentialenergy,
                          imag_modes_handling=imag_modes_handling,
                          modes=modes)
 
@@ -829,7 +843,8 @@ class MSRRHOThermo(QuasiHarmonicThermo):
         energies should match the number of degrees of freedom of the
         adsorbate; i.e., 3*n, where n is the number of atoms. Note that
         this class does not check that the user has supplied the correct
-        number of energies. Units of energies are eV.
+        number of energies. Units of energies are eV. Note, that if 'modes'
+        are given, these energies are not used.
     atoms: an ASE atoms object
         used to calculate rotational moments of inertia and molecular mass
     tau : float
@@ -971,7 +986,7 @@ class HinderedThermo(BaseThermoChem):
         vib_energies, n_imag = _clean_vib_energies(
             vib_energies, handling=imag_modes_handling
         )
-        super().__init__(vib_energies)
+        super().__init__(vib_energies=vib_energies)
         self.n_imag = n_imag
 
         if (mass or atoms) and (inertia or atoms):
@@ -1231,7 +1246,7 @@ class IdealGasThermo(BaseThermoChem):
         vib_energies, n_imag = _clean_vib_energies(
             vib_energies, handling=imag_modes_handling
         )
-        super().__init__(vib_energies,
+        super().__init__(vib_energies=vib_energies,
                          atoms=atoms,
                          spin=spin)
         self.n_imag = n_imag
