@@ -8,7 +8,7 @@ Can deal with most major functionality, with the notable exception of ibrav,
 for which we only support ibrav == 0 and force CELL_PARAMETERS to be provided
 explicitly.
 
-Units are converted using CODATA 2006, as used internally by Quantum
+Units are converted using CODATA 2018, as used internally by Quantum
 ESPRESSO.
 """
 
@@ -35,8 +35,8 @@ from ase.io.espresso_namelist.namelist import Namelist
 from ase.units import create_units
 from ase.utils import deprecated, reader, writer
 
-# Quantum ESPRESSO uses CODATA 2006 internally
-units = create_units('2006')
+# Quantum ESPRESSO uses CODATA 2018 internally
+units = create_units('2018')
 
 # Section identifiers
 _PW_START = 'Program PWSCF'
