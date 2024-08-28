@@ -614,7 +614,7 @@ class Wannier:
         FW_lowestband = min([fs_m.start for fs_m in self.fixedstates_km])
         FW_highestband = max([fs_m.stop - 1 for fs_m in self.fixedstates_km])
         min_n_wannier = FW_highestband - FW_lowestband + 1
-        extra_wannier = nwannier - min_n_wannier
+        extra_wannier = self.nwannier - min_n_wannier
         c1 = 2 * int(extra_wannier / 4)
         #  we have more EDF than the minimum required;
         #  now choose how to divide them between upper and lower spaces
@@ -625,7 +625,7 @@ class Wannier:
         edf_below_k = [c1 + fs_m.start - FW_lowestband
                        for fs_m in self.fixedstates_km]\
 
-        edf_above_k = [nwannier - edf_below - fixedstates
+        edf_above_k = [self.nwannier - edf_below - fixedstates
                        for edf_below, fixedstates in
                        zip(edf_below_k, self.fixedstates_k)]
         self.edf_below_k = edf_below_k
