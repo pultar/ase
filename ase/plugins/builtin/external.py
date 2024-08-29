@@ -98,7 +98,7 @@ def register_external_viewer_formats(group):
 
 
 def ase_register():
-    register_calculator("asap3.EMT")
+    register_calculator("asap3.EMT", name='asap')
     register_calculator("gpaw.GPAW")
     register_calculator("hotbit.Calculator", name='hotbit')
 
