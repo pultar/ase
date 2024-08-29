@@ -13,7 +13,8 @@ class BasePluggable:
     A class, that holds information about an implementation of a calculator,
     viewer, IO, whatsoever.
     """
-    def register(self):
+    def register(self, plugin):
+        self.plugin = plugin
         self.plugin.add_pluggable(self)
         self.plugin.plugins.pluggables_of(self.class_type).add(self)
 
@@ -33,8 +34,7 @@ class BasePluggable:
 class Pluggable(BasePluggable):
     """ A pluggable, that is implemented by a class """
 
-    def __init__(self, plugin, class_type, name, cls):
-        self.plugin = plugin
+    def __init__(self, class_type, name, cls):
         self.class_type = class_type
         self.name = name
         self.cls = cls

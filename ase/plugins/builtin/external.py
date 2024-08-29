@@ -27,13 +27,14 @@ forwarded to `my_package.viewer.view_my_viewer` function.
 """
 
 import warnings
-from ase.register import register_calculator
+from ase.plugins import register_calculator
 from ase.io.formats import define_io_format
 from ase.visualize.viewers import define_viewer
 from ase.utils.plugins import ExternalIOFormat
-from ase.register.plugins import get_currently_registered_plugin
 from ase.utils.plugins import ExternalViewer
 from importlib.metadata import entry_points
+
+plugin_name = 'external'
 
 
 def define_external_io_format(entry_point):
@@ -45,9 +46,7 @@ def define_external_io_format(entry_point):
         raise TypeError('Wrong type for registering external IO formats '
                         f'in format {entry_point.name}, expected '
                         'ExternalIOFormat')
-    fmt = define_io_format(entry_point.name, **fmt._asdict(), external=True)
-    fmt.plugin = get_currently_registered_plugin()
-    fmt.register()
+    return define_io_format(entry_point.name, **fmt._asdict(), external=True)
 
 
 def register_external_io_formats(group):
@@ -78,8 +77,8 @@ def define_external_viewer(entry_point):
             f"in format {entry_point.name}, expected "
             "ExternalViewer"
         )
-    define_viewer(entry_point.name, **viewer_def._asdict(),
-                  external=True)
+    return define_viewer(entry_point.name, **viewer_def._asdict(),
+                         external=True)
 
 
 def register_external_viewer_formats(group):

@@ -3,11 +3,11 @@ Module for managing viewers
 
 For docs on importing viewers using the old entry-point mechanism,
 please see the ase.plugins.external.
-Now the preffered way how to define a viewer is to create plugin:
-package ase.plugins.<yourplugin> and in its __init__.py do
+Now the preffered way how to define a viewer is to create plugin,
+see the docs of ase.plugins.
 
 ::
-  import register_viewer from ase.register
+  import register_viewer from ase.plugins
   def ase_register():
       register_viewer(...)
 """
@@ -21,10 +21,11 @@ from importlib import import_module
 from io import BytesIO
 from pathlib import Path
 
-from ase.register.listing import LazyListing
+from ase.plugins.listing import LazyListing
 from ase.utils import lazyproperty
 import ase.io
-from ase.register.pluggables import BasePluggable, Pluggables
+from ase.plugins.pluggables import BasePluggable, Pluggables
+from ase.plugins.register import register_function
 
 
 class UnknownViewerError(Exception):
@@ -175,6 +176,7 @@ def _pipe_to_ase_gui(atoms, repeat, **kwargs):
     return proc
 
 
+@register_function
 def define_viewer(
     name, desc, *, module=None, cli=False, fmt=None, argv=None, external=False
 ):

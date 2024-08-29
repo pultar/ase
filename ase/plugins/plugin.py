@@ -4,7 +4,7 @@ the pluggables (Calculators, IOs, etc...) provided by the plugins.
 
 The structure is as follows
 
-
+```
 -----------                     --------------------------------
 |         |                     |                              |
 | Plugins |--------1:n----------|   Plugin (can provide some   |
@@ -39,12 +39,13 @@ The structure is as follows
                                          |    subclass)         |
                                          |                      |
                                          """"""""""""""""""""""""
+```
+
+To register a plugin, see a docstring of
+:module:`ase.plugins.builtin.plugins`
 """
 
 from contextlib import contextmanager
-import importlib
-import pkgutil
-import warnings
 from ase.utils import lazyproperty
 from .listing import Listing
 _current_plugin = None
@@ -84,41 +85,19 @@ def get_currently_registered_plugin():
 
 class Plugins(Listing):
     """ A class, that holds all the installed plugins in
-        the given namespace package."""
+        the given namespace package.
+        Plugins are registered by importing register subpackage.
+    """
 
-    """ This information is just for initial creating of the pluggables """
-    def __init__(self, namespace_package, pluggable_types):
-        self.namespace_package = namespace_package
+    def __init__(self, pluggable_types):
         self._pluggables = {
             k: cls(k)
             for k, cls in pluggable_types.items()
         }
+        self._items = {}
 
-    def packages(self):
-        """ Return all the plugin packages, that are in the
-        given namespace package (so that are in 'ase.plugins') """
-        package = importlib.import_module(self.namespace_package)
-
-        def mod_name(mod):
-            return self.namespace_package + '.' + mod.name
-
-        def import_plugin_module(name, path):
-            try:
-                module = importlib.import_module(name)
-                return module
-            except ImportError:
-                warnings.warn(f"Can not import {name} in {path}."
-                              " This ASE plugin is probably broken.")
-
-        modules = (import_plugin_module(mod_name(mod), mod.module_finder.path)
-                   for mod in pkgutil.iter_modules(package.__path__))
-
-        modules = (i for i in modules if i)
-        return modules
-
-    def _populate(self):
-        self._items = {p.__name__.rsplit('.', 1)[-1]: Plugin(self, p)
-                       for p in self.packages()}
+    def register(self, plugin):
+        self._items[plugin.name] = plugin
 
     def pluggables_of(self, class_type):
         return self._pluggables[class_type]
@@ -139,27 +118,17 @@ class Plugins(Listing):
         return self.pluggables_of('io_formats')
 
     def __repr__(self):
-        return f"<ASE plugins from: {self.namespace_package}>"
+        return "<ASE plugins>"
 
     def info(self, prefix='', opts={}, filter=None):
         return "Plugins:\n"\
                "--------\n" + super().info(prefix, opts, filter)
 
-    def register(self):
-        """
-        Register all the installed pluggables. To do so
-        - import all plugin packages
-        - register all the pluggables from the plugins
-        """
-        self._populate()
-        for i in self.values():
-            i.register()
-
 
 class Plugin:
     """ A class, that encapsulates a plugin package """
 
-    def __init__(self, plugins, package):
+    def __init__(self, plugins, package, name=None):
         self.plugins = plugins
         self.package = package
         self.pluggables = {
@@ -168,14 +137,13 @@ class Plugin:
         self.modules = {}
         self._pluggables = {}
         self.registered = False
+        if name is None:
+            name = self.package.__name__[12:]   # get rig 'ase.plugins'
+        self.name = name
 
     def add_pluggable(self, pluggable):
         """ Called by Pluggable.register() """
         self.pluggables[pluggable.class_type][pluggable.name] = pluggable
-
-    @property
-    def name(self):
-        return self.package.__name__[12:]   # get rig 'ase.plugins'
 
     @property
     def lowercase_names(self):
@@ -191,6 +159,7 @@ class Plugin:
                 with within_the_plugin(self):
                     self.package.ase_register()
             self.registered = True
+            self.plugins.register(self)
 
     def info(self, prefix='', opts={}):
         info = f'{prefix}{self.name}'

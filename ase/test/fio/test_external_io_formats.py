@@ -10,7 +10,7 @@ import pytest
 
 from ase.build import bulk
 from ase.io import formats, read, write
-from ase.plugins.external import define_external_io_format
+from ase.plugins.builtin.external import define_external_io_format
 from ase.utils.plugins import ExternalIOFormat
 
 
