@@ -32,7 +32,7 @@ from .register import register_viewer, register_io_format, register_calculator #
 from .plugin import Plugins
 from ase.io import formats as _formats
 from ase.visualize import viewers as _viewers
-from .builtin import register_plugins # NOQA
+from .registering import register_plugins # NOQA
 
 plugins = Plugins({
     'calculators': CalculatorPluggables,
