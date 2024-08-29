@@ -8,9 +8,12 @@ import os
 import warnings
 from pathlib import Path
 
-from ase.calculators.genericfileio import (BaseProfile, CalculatorTemplate,
-                                           GenericFileIOCalculator,
-                                           read_stdout)
+from ase.calculators.genericfileio import (
+    BaseProfile,
+    CalculatorTemplate,
+    GenericFileIOCalculator,
+    read_stdout,
+)
 from ase.io import read, write
 from ase.io.espresso import Namelist
 
@@ -29,9 +32,10 @@ compatibility_msg = (
 
 
 class EspressoProfile(BaseProfile):
-    def __init__(self, binary, pseudo_dir, **kwargs):
-        super().__init__(**kwargs)
-        self.binary = binary
+    configvars = {'pseudo_dir'}
+
+    def __init__(self, command, pseudo_dir, **kwargs):
+        super().__init__(command, **kwargs)
         self.pseudo_dir = Path(pseudo_dir)
 
     @staticmethod
@@ -43,17 +47,11 @@ class EspressoProfile(BaseProfile):
         return match.group(1)
 
     def version(self):
-        try:
-            stdout = read_stdout(self.binary)
-            return self.parse_version(stdout)
-        except FileNotFoundError:
-            warnings.warn(
-                f'The executable {self.binary} is not found on the path'
-            )
-            return None
+        stdout = read_stdout(self._split_command)
+        return self.parse_version(stdout)
 
     def get_calculator_command(self, inputfile):
-        return [self.binary, '-in', inputfile]
+        return ['-in', inputfile]
 
 
 class EspressoTemplate(CalculatorTemplate):
@@ -119,8 +117,6 @@ class Espresso(GenericFileIOCalculator):
         command=GenericFileIOCalculator._deprecated,
         label=GenericFileIOCalculator._deprecated,
         directory='.',
-        parallel_info=None,
-        parallel=True,
         **kwargs,
     ):
         """
@@ -161,15 +157,11 @@ class Espresso(GenericFileIOCalculator):
             raise RuntimeError(compatibility_msg)
 
         if label is not self._deprecated:
-            import warnings
-
             warnings.warn(
                 'Ignoring label, please use directory instead', FutureWarning
             )
 
         if 'ASE_ESPRESSO_COMMAND' in os.environ and profile is None:
-            import warnings
-
             warnings.warn(compatibility_msg, FutureWarning)
 
         template = EspressoTemplate()
@@ -177,7 +169,5 @@ class Espresso(GenericFileIOCalculator):
             profile=profile,
             template=template,
             directory=directory,
-            parallel_info=parallel_info,
-            parallel=parallel,
             parameters=kwargs,
         )
