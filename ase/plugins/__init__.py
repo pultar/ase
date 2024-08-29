@@ -1,4 +1,28 @@
-"""Atomic Simulation Environment plugin package."""
+"""Atomic Simulation Environment plugin package. In this package is all the stuff
+related to the ASE plugins - mechanism how to enrich ASE package with new
+formats, calculators and/or viewers.
+
+To create a plugin, please, add ``ase.plugins`` entry point (e.g. to pyproject.toml
+file) to your package. The entry point should have the name of the plugin, and the
+value the module, that contains a ``ase_register`` function. This function should
+call ``register_io_format``, ``register_calculator`` and/or ``register_viewer``
+to register the new calculators/viewers/... E.g.
+
+```toml
+[project.entry-points."ase.plugins"]
+my_plugin_name = "my_package.module_with_ase_register"
+```
+
+``my_package.module_with_ase_register`` than could contain e.g.:
+```
+def ase_register():
+    from ase.plugins import register_calculator, register_io_format
+    register_calculator('ase2sprkkr.SPRKKR')
+    register_io_format('ase2sprkkr.ase.io', 'SPRKKR potential file',
+                       '1F', name='sprkkr', ext='pot')
+```
+"""
+
 __path__ = __import__('pkgutil').extend_path(__path__, __name__)
 
 from .pluggables import CalculatorPluggables

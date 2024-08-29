@@ -1,6 +1,7 @@
 """
 Modules of this package are automatically imported.
-These modules takes care of registering plugins.
+These modules takes care of registering all plugins and
+pluggables known to the ase.
 """
 
 import importlib
@@ -10,8 +11,9 @@ from ..plugin import Plugin
 
 
 def modules():
-    """ Return all the plugin packages, that are in the
-    given namespace package (so that are in 'ase.plugins') """
+    """ Return all the plugin packages, that are present in this
+    package (each of them represent one built-in plugin, or register
+    the external plugins) """
     modules = []
 
     def mod_name(mod):
@@ -33,6 +35,7 @@ def modules():
 
 
 def register_plugins():
+    """ This function register the plugins in modules of this subpackage. """
     from .. import plugins
 
     for module in modules():

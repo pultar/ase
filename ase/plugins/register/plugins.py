@@ -34,10 +34,10 @@ def ase_register_ex():
         try:
             module = importlib.import_module(value)
             return module
-        except ImportError:
+        except Exception as e:
             warnings.warn(f"Can not import {value} from entry point "
-                          f"ase.plugins.{name}."
-                          " This ASE plugin is probably broken.")
+                          f"ase.plugins.{name}. "
+                          f"This ASE plugin is probably broken. \nReason: {e}")
 
     if sys.version_info < (3, 10):
         epoints = entry_points()
