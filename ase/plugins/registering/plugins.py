@@ -36,7 +36,7 @@ def ase_register_ex():
             return module
         except Exception as e:
             warnings.warn(f"Can not import {value} from entry point "
-                          f"ase.plugins.{name}. "
+                          f"ase.plugins.{name} or call the ase_register function. "
                           f"This ASE plugin is probably broken. \nReason: {e}")
 
     if sys.version_info < (3, 10):
