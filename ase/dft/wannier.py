@@ -118,7 +118,7 @@ def md_min(func, step=.25, tolerance=1e-6, max_iter=10000,
         fvalue = func.get_functional_value()
 
         if fvalue < fvalueold:
-            step *= 0.5
+            step *= np.sqrt(0.5)    
         count += 1
         log(f'MDmin: iter={count}, step={step}, value={fvalue}')
         if count > max_iter:
@@ -578,8 +578,7 @@ class Wannier:
         Nb = self.nbands
         self.Z_dkww = np.empty((self.Ndir, self.Nk, Nw, Nw), complex)
         self.V_knw = np.zeros((self.Nk, Nb, Nw), complex)
-        if self.minband != 0:
-            self.band_mask = self.get_band_mask()
+        self.band_mask = self.get_band_mask()
         if file is None:
             self.Z_dknn = self.new_Z(calc, k0_dkc)
         self.initialize(file=file, initialwannier=initialwannier, rng=rng)
