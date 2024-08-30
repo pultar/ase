@@ -16,7 +16,6 @@ class BasePluggable:
     def register(self, plugin):
         self.plugin = plugin
         self.plugin.add_pluggable(self)
-        self.plugin.plugins.pluggables_of(self.class_type).add(self)
 
     @lazyproperty
     def lowercase_names(self):

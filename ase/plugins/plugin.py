@@ -144,6 +144,7 @@ class Plugin:
     def add_pluggable(self, pluggable):
         """ Called by Pluggable.register() """
         self.pluggables[pluggable.class_type][pluggable.name] = pluggable
+        self.plugins.pluggables_of(pluggable.class_type).add(pluggable)
 
     @property
     def lowercase_names(self):
