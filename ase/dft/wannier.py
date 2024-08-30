@@ -472,6 +472,7 @@ class Wannier:
                  fixedenergy=None,
                  fixedstates=None,
                  spin=0,
+                 minband=0,
                  initialwannier='orbitals',
                  functional='std',
                  rng=np.random,
@@ -532,7 +533,9 @@ class Wannier:
         # Bloch phase sign convention.
         # May require special cases depending on which code is used.
         sign = -1
-
+        if minband != 0:
+            assert fixedstates is not None, 'not implemented...'
+        self.minband = minband
         self.log = log
         self.calc = calc
 
@@ -575,7 +578,8 @@ class Wannier:
         Nb = self.nbands
         self.Z_dkww = np.empty((self.Ndir, self.Nk, Nw, Nw), complex)
         self.V_knw = np.zeros((self.Nk, Nb, Nw), complex)
-
+        if self.minband != 0:
+            self.band_mask = self.get_band_mask()
         if file is None:
             self.Z_dknn = self.new_Z(calc, k0_dkc)
         self.initialize(file=file, initialwannier=initialwannier, rng=rng)
@@ -606,7 +610,13 @@ class Wannier:
                 Z_dknn[d, k] = calc.get_wannier_localization_matrix(
                     nbands=Nb, dirG=dirG, kpoint=k, nextkpoint=k1,
                     G_I=k0_c, spin=self.spin)
-        return Z_dknn
+
+        if self.minband == 0:
+            return Z_dknn
+        band_mask = self.band_mask
+        Z_dkNN = Z_dknn[:, :, :, band_mask]
+        Z_dkNN = Z_dkNN[:, :, band_mask]
+        return Z_dkNN
 
     @property
     def unitcell_cc(self):
@@ -677,6 +687,23 @@ class Wannier:
 
         # Update the new Z matrix
         self.Z_dww = self.Z_dkww.sum(axis=1) / self.Nk
+
+    def get_band_mask(self):
+        Nb = self.nbands
+        m0, m1 = self.minband, self.minband + self.fixedstates_k[0]
+        band_indices = np.linspace(0, Nb, Nb, endpoint=False, dtype=int)
+        # Slice out the section you want to move to the front
+        section_to_move = band_indices[m0:m1]
+
+        # Slice out the remaining parts of the array
+        remaining_section_1 = band_indices[:m0]
+        remaining_section_2 = band_indices[m1:]
+
+        # Concatenate the sections, with the cut-out section at the front
+        band_mask = np.concatenate((section_to_move,
+                                    remaining_section_1,
+                                    remaining_section_2), axis=0)
+        return band_mask
 
     def get_optimal_nwannier(self, nwrange=5, random_reps=5, tolerance=1e-6):
         """
@@ -913,6 +940,8 @@ class Wannier:
                   k           k    k
         """
         eps_n = self.calcdata.eps_skn[self.spin, k, :self.nbands]
+        if self.minband != 0:
+            eps_n = eps_n[self.band_mask]
         V_nw = self.V_knw[k]
         return (dag(V_nw) * eps_n) @ V_nw
 
@@ -1062,7 +1091,42 @@ class Wannier:
             fun = np.sum(a_w) - self.nwannier * np.var(a_w)
             self.log(f'std: {np.sum(a_w):.4f}',
                      f'\tvar: {self.nwannier * np.var(a_w):.4f}')
+
+        if self.minband != 0:
+            fun = fun - self.projector_cost_function()
         return fun
+
+    def get_edf_projector(self, return_P_nn=False):
+        """
+        Project EDF into lower edf subspace (U1)
+        """
+        band_mask = self.band_mask
+        # number of bands in lower subspace corresponds to index
+        # of 1st band in fixed space
+        dim_u1 = band_mask[0]
+        P_n = np.zeros((self.nbands))
+        P_n[:dim_u1] = 1
+        # diag matrix containing 1's for bands in lower space, and 0 elsewhere
+        P_nn = np.diag(P_n[band_mask])
+        if return_P_nn:
+            return P_nn
+        P_kww = self.V_knw.conj().transpose(0, 2, 1) @ P_nn @ self.V_knw
+        return P_kww
+
+    def projector_cost_function(self):
+        P_kww = self.get_edf_projector()
+        return np.sum(P_kww - P_kww @ P_kww, axis=0).trace() / self.Nk
+
+    def projector_cost_function_gradient(self, ik):
+        # ik : k index
+        P_nn = self.get_edf_projector(return_P_nn=True)
+        c_ul = self.C_kul[ik]
+        C_nw = np.zeros((self.nbands, self.nwannier), dtype=complex)
+        M = self.fixedstates_k[ik]
+        C_nw[:M, :M] = np.eye(M)
+        C_nw[M:, M:] = c_ul
+        grad_nw = P_nn @ C_nw - 2 * P_nn @ C_nw @ dag(C_nw) @ P_nn @ C_nw
+        return grad_nw / self.Nk
 
     def get_gradients(self):
         # Determine gradient of the spread functional.
@@ -1165,6 +1229,11 @@ class Wannier:
                 # Ctemp now has same dimension as V, the gradient is in the
                 # lower-right (Nb-M) x L block
                 Ctemp_ul = Ctemp_nw[M:, M:]
+                if self.minband != 0:
+                    projector_grad_nw = self.projector_cost_function_gradient(
+                        k)
+                    projector_grad_ul = projector_grad_nw[M:, M:]
+                    Ctemp_ul = Ctemp_ul - projector_grad_ul
                 G_ul = Ctemp_ul - ((C_ul @ dag(C_ul)) @ Ctemp_ul)
                 dC.append(G_ul.ravel())
 
