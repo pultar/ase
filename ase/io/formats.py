@@ -28,7 +28,6 @@ from typing import (IO, Any, Iterable, List, Optional, Sequence, Tuple,
 from ase.utils import lazyproperty
 from ase.plugins.pluggables import BasePluggable, Pluggables
 from ase.plugins.listing import ListingView
-from ase.plugins.register import register_function
 
 from ase.atoms import Atoms
 from ase.parallel import parallel_function, parallel_generator
@@ -362,7 +361,6 @@ class IOFormatPluggables(Pluggables):
 format2modulename = {}  # Left for compatibility only.
 
 
-@register_function
 def define_io_format(name, desc, code, *, module=None, ext=None,
                      glob=None, magic=None, encoding=None,
                      magic_regex=None, external=False,

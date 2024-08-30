@@ -26,8 +26,6 @@ def ase_register():
 __path__ = __import__('pkgutil').extend_path(__path__, __name__)
 
 from .pluggables import CalculatorPluggables
-from .register import register_viewer, register_io_format, register_calculator # NOQA
-
 
 from .plugin import Plugins
 from ase.io import formats as _formats
