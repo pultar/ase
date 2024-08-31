@@ -1,8 +1,7 @@
-from dataclasses import dataclass
 import warnings
+from dataclasses import dataclass
 
 import numpy as np
-
 
 spin_error = (
     'The spin keyword is no longer supported.  Please call the function '
@@ -69,7 +68,7 @@ class GapInfo:
             if ibz_kpoints is not None:
                 coordtxt = '[{:.2f}, {:.2f}, {:.2f}]'.format(
                     *ibz_kpoints[skn[1]])
-                description = f'{description}, [{coordtxt}]'
+                description = f'{description}, {coordtxt}'
             return f'({description})'
 
         gap, skn1, skn2 = self.gap()

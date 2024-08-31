@@ -18,7 +18,7 @@ class CLICommand:
         parser.add_argument('--files', nargs='*', metavar='PATH',
                             help='Print information about specified files.')
         parser.add_argument('-v', '--verbose', action='store_true',
-                            help='Show more information about files.')
+                            help='Show additional information about files.')
         parser.add_argument('--config', action='store_true',
                             help='List configured calculators')
         parser.add_argument('--formats', nargs='*', metavar='NAME',

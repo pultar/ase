@@ -23,8 +23,17 @@ import sys
 import warnings
 from importlib import import_module
 from pathlib import Path, PurePath
-from typing import (IO, Any, Iterable, List, Optional, Sequence, Tuple,
-                    Union)
+from typing import (
+    IO,
+    Any,
+    Dict,
+    Iterable,
+    List,
+    Optional,
+    Sequence,
+    Tuple,
+    Union,
+)
 from ase.utils import lazyproperty
 from ase.plugins.pluggables import BasePluggable, Pluggables
 from ase.plugins.listing import ListingView
