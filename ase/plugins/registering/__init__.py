@@ -7,7 +7,6 @@ pluggables known to the ase.
 import importlib
 import pkgutil
 import warnings
-from ..plugin import Plugin
 
 
 def modules():
@@ -43,6 +42,6 @@ def register_plugins():
             name = getattr(module, 'plugin_name', None)
             if name is None:
                 name = 'builtin-' + module.__name__.rsplit('.',2)[-1]
-            Plugin(plugins, module, name).register()
+            plugins.create_plugin(module, name).register()
         elif hasattr(module, 'ase_register_ex'):
             module.ase_register_ex()
