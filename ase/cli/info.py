@@ -3,7 +3,7 @@
 # import time during CLI execution
 
 from itertools import product
-from typing import Optional, List
+from typing import List, Optional
 
 
 class CLICommand:
@@ -56,8 +56,8 @@ class CLICommand:
 
 
 def print_file_info(args):
-    from ase.io.formats import UnknownFileTypeError, filetype, ioformats
     from ase.io.bundletrajectory import print_bundletrajectory_info
+    from ase.io.formats import UnknownFileTypeError, filetype, ioformats
     from ase.io.ulm import print_ulm_info
     n = max(len(filename) for filename in args.files) + 2
     nfiles_not_found = 0

@@ -19,12 +19,12 @@ my_cool_package="my_cool_package.ase.register"
 ```
 """
 
-from .. import plugins
-
 import importlib
+import sys
 import warnings
 from importlib.metadata import entry_points
-import sys
+
+from .. import plugins
 
 
 def ase_register_ex():
@@ -36,17 +36,18 @@ def ase_register_ex():
         except Exception as e:
             spec = importlib.util.find_spec(value)
             inn = f" located in '{spec.origin}'" if spec else ""
-            warnings.warn(f"Can not import module {value}{inn} from entry point "
-                          f"ase.plugins.{name} or call its ase_register() function. "
+            warnings.warn(f"Can not import module {value}{inn} from entry "
+                          f" point ase.plugins.{name} or call its "
+                          f" ase_register() function. "
                           f"This ASE plugin is probably broken. \nReason: {e}")
 
     if sys.version_info < (3, 10):
         epoints = entry_points()
         if 'ase.plugins' not in epoints:
-              return
+            return
         epoints = epoints['ase.plugins']
     else:
-        epoints = entry_points(group = 'ase.plugins')
+        epoints = entry_points(group='ase.plugins')
     for epoint in epoints:
         module = import_plugin_module(epoint.name, epoint.value)
         if module:

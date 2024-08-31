@@ -1,12 +1,14 @@
-"""Atomic Simulation Environment plugin package. In this package is all the stuff
-related to the ASE plugins - mechanism how to enrich ASE package with new
-formats, calculators and/or viewers.
+"""Atomic Simulation Environment plugin package. In this package is all the
+stuff related to the ASE plugins - mechanism how to enrich ASE package with
+new formats, calculators and/or viewers.
 
-To create a plugin, please, add ``ase.plugins`` entry point (e.g. to pyproject.toml
-file) to your package. The entry point should have the name of the plugin, and the
-value the module, that contains a ``ase_register`` function. This function should
-call ``register_io_format``, ``register_calculator`` and/or ``register_viewer``
-to register the new calculators/viewers/... E.g.
+To create a plugin, please, add ``ase.plugins`` entry point (e.g. to
+pyproject.toml file) to your package. The entry point should have the name of
+the plugin, and the value the module, that contains a ``ase_register``
+function, that accepts plugin as argument.
+This function should call ``register_io_format``,
+``register_calculator`` and/or ``register_viewer``
+plugin method to register the new calculators/viewers/... E.g.
 
 ```toml
 [project.entry-points."ase.plugins"]
@@ -25,12 +27,12 @@ def ase_register():
 
 __path__ = __import__('pkgutil').extend_path(__path__, __name__)
 
-from .pluggables import CalculatorPluggables
-
-from .plugin import Plugins
 from ase.io import formats as _formats
 from ase.visualize import viewers as _viewers
-from .registering import register_plugins # NOQA
+
+from .pluggables import CalculatorPluggables
+from .plugin import Plugins
+from .registering import register_plugins  # NOQA
 
 plugins = Plugins({
     'calculators': CalculatorPluggables,
@@ -62,7 +64,4 @@ __all__ = [
     'calculators',
     'io_formats',
     'viewers',
-    'register_viewer',
-    'register_io_format',
-    'register_calculator'
 ]

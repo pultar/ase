@@ -3,8 +3,8 @@ In this plugins, external calculators/viewers/formats
 (either the old long known by ASE, or the ones registered using entry-points)
 are present. This way of registering calculators/... is deprecated.
 
-Formerly, view plugins could be registered through the entrypoint system in with the
-following in a module, such as a `viewer.py` file:
+Formerly, view plugins could be registered through the entrypoint system in
+with the following in a module, such as a `viewer.py` file:
 
 ```python3
 VIEWER_ENTRYPOINT = ExternalViewer(
@@ -28,9 +28,9 @@ forwarded to `my_package.viewer.view_my_viewer` function.
 """
 
 import warnings
-from ase.utils.plugins import ExternalIOFormat
-from ase.utils.plugins import ExternalViewer
 from importlib.metadata import entry_points
+
+from ase.utils.plugins import ExternalIOFormat, ExternalViewer
 
 plugin_name = 'external'
 
@@ -45,7 +45,8 @@ def register_external_io_format(plugin, entry_point):
         raise TypeError('Wrong type for registering external IO formats '
                         f'in format {entry_point.name}, expected '
                         'ExternalIOFormat')
-    return plugin.register_io_format(name=entry_point.name, **fmt._asdict(), external=True)
+    return plugin.register_io_format(name=entry_point.name, **fmt._asdict(),
+                                     external=True)
 
 
 def _register_external_io_formats(plugin, group):
@@ -79,8 +80,9 @@ def _register_external_viewer_formats(plugin, group):
                 f"in format {entry_point.name}, expected "
                 "ExternalViewer"
             )
-        return plugin.register_viewer(name=entry_point.name, **viewer_def._asdict(),
-                             external=True)
+        return plugin.register_viewer(name=entry_point.name,
+                                      **viewer_def._asdict(),
+                                      external=True)
 
     if hasattr(entry_points(), "select"):
         viewer_entry_points = entry_points().select(group=group)

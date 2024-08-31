@@ -45,10 +45,14 @@ To register a plugin, see a docstring of
 :module:`ase.plugins.builtin.plugins`
 """
 
-from ase.utils import lazyproperty
-from .listing import Listing
-from typing import Tuple, List, Union, Optional
+import warnings
+from typing import List, Optional, Tuple, Union
+
 import numpy as np
+
+from ase.utils import lazyproperty
+
+from .listing import Listing
 
 
 class Plugins(Listing):
@@ -130,7 +134,7 @@ class Plugin:
         if not self.registered:
             try:
                 if hasattr(self.package, 'ase_register'):
-                   self.package.ase_register(self)
+                    self.package.ase_register(self)
             except Exception as e:
                 warnings.warn(f"Can not register plugin {self} because of {e}")
             self.registered = True
@@ -209,9 +213,9 @@ class Plugin:
                                        )
         fmt.register(self)
 
-    def register_viewer(self, name, desc, *, module=None, cli=False, fmt=None, argv=None,
-                        external=True):
-        viewer=viewers.define_viewer(name, desc, module=module, cli=cli,
+    def register_viewer(self, name, desc, *, module=None, cli=False, fmt=None,
+                        argv=None, external=True):
+        viewer = viewers.define_viewer(name, desc, module=module, cli=cli,
                                      fmt=fmt, argv=argv, external=external)
         viewer.register(self)
 

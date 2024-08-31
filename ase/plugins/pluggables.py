@@ -3,9 +3,11 @@ the real implementator, if they are not actually used) references
 to the classes/modules/function...whatever implements a given
 functionality, e.g. Calculators, IOFormats etc."""
 
-from ase.utils import lazyproperty
 import importlib
-from . listing import Listing
+
+from ase.utils import lazyproperty
+
+from .listing import Listing
 
 
 class BasePluggable:

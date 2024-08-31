@@ -11,8 +11,8 @@ import pytest
 
 from ase.build import bulk
 from ase.io import formats, read, write
-from ase.utils.plugins import ExternalIOFormat
 from ase.plugins import plugins
+from ase.utils.plugins import ExternalIOFormat
 
 
 @pytest.fixture(autouse=True)
@@ -41,7 +41,7 @@ def write_dummy(file, atoms):
     file.write("dummy output")
 
 
-plugin=None
+plugin = None
 
 
 def define_external_io_format(entry_point):
