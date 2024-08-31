@@ -485,7 +485,7 @@ def _write_stress(fd: TextIO, atoms: Atoms, units: Dict[str, float]):
 
     hartree = units['Eh']
     bohr = units['a0']
-    stress /= (hartree / bohr**3)  # eV/Å^3 -> atomic unit (hartree/bohr^3)
+    stress = stress / (hartree / bohr**3)
 
     for i in range(3):
         fd.write(18 * ' ')
@@ -517,7 +517,7 @@ def _write_forces(fd: TextIO, atoms: Atoms, units: Dict[str, float]):
 
     hartree = units['Eh']
     bohr = units['a0']
-    forces /= (hartree / bohr)
+    forces = forces / (hartree / bohr)
 
     symbols = atoms.symbols
     indices = symbols.species_indices()
