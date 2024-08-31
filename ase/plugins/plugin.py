@@ -45,6 +45,7 @@ To register a plugin, see a docstring of
 :module:`ase.plugins.builtin.plugins`
 """
 
+import warnings
 from contextlib import contextmanager
 
 from ase.utils import lazyproperty
@@ -168,8 +169,7 @@ class Plugin:
                     with within_the_plugin(self):
                         self.package.ase_register()
             except Exception as e:
-                # warnings.warn(f"Can not register plugin {self} because of {e}")
-                pass
+                warnings.warn(f"Can not register plugin {self} because of {e}")
             self.registered = True
             self.plugins.register(self)
 

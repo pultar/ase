@@ -36,14 +36,15 @@ def ase_register_ex():
         except Exception as e:
             spec = importlib.util.find_spec(value)
             inn = f" located in '{spec.origin}'" if spec else ""
-            warnings.warn(f"Can not import module {value}{inn} from entry point "
-                          f"ase.plugins.{name} or call its ase_register() function. "
+            warnings.warn(f"Can not import module {value}{inn} from entry "
+                          f" point ase.plugins.{name} or call its "
+                          f" ase_register() function. "
                           f"This ASE plugin is probably broken. \nReason: {e}")
 
     if sys.version_info < (3, 10):
         epoints = entry_points()
         if 'ase.plugins' not in epoints:
-              return
+            return
         epoints = epoints['ase.plugins']
     else:
         epoints = entry_points(group='ase.plugins')

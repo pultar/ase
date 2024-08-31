@@ -3,8 +3,8 @@ In this plugins, external calculators/viewers/formats
 (either the old long known by ASE, or the ones registered using entry-points)
 are present. This way of registering calculators/... is deprecated.
 
-Formerly, view plugins could be registered through the entrypoint system in with the
-following in a module, such as a `viewer.py` file:
+Formerly, view plugins could be registered through the entrypoint system,
+in with the following in a module, such as a `viewer.py` file:
 
 ```python3
 VIEWER_ENTRYPOINT = ExternalViewer(

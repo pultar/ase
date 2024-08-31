@@ -1,11 +1,12 @@
-"""Atomic Simulation Environment plugin package. In this package is all the stuff
-related to the ASE plugins - mechanism how to enrich ASE package with new
-formats, calculators and/or viewers.
+"""Atomic Simulation Environment plugin package. In this package is all the
+stuff related to the ASE plugins - mechanism how to enrich ASE package with
+new formats, calculators and/or viewers.
 
-To create a plugin, please, add ``ase.plugins`` entry point (e.g. to pyproject.toml
-file) to your package. The entry point should have the name of the plugin, and the
-value the module, that contains a ``ase_register`` function. This function should
-call ``register_io_format``, ``register_calculator`` and/or ``register_viewer``
+To create a plugin, please, add ``ase.plugins`` entry point (e.g. to
+pyproject.toml file) to your package. The entry point should have the name of
+the plugin, and the value the module, that contains a ``ase_register``
+function. This function should call ``register_io_format``,
+``register_calculator`` and/or ``register_viewer``
 to register the new calculators/viewers/... E.g.
 
 ```toml
