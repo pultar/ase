@@ -3,6 +3,7 @@ from math import sqrt
 from typing import Callable, Dict, List, Optional, Sequence, TextIO, Union
 
 import numpy as np
+
 from ase import Atoms
 from ase.io.formats import string2index
 from ase.stress import full_3x3_to_voigt_6_stress, voigt_6_to_full_3x3_stress
