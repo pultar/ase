@@ -130,10 +130,9 @@ class Plugin:
         if not self.registered:
             try:
                 if hasattr(self.package, 'ase_register'):
-                   self.package.ase_register()
+                   self.package.ase_register(self)
             except Exception as e:
-                #warnings.warn(f"Can not register plugin {self} because of {e}")
-                pass
+                warnings.warn(f"Can not register plugin {self} because of {e}")
             self.registered = True
             self.plugins.register(self)
 
