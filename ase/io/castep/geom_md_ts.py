@@ -66,6 +66,10 @@ def _read_images(
 
     Everything in the .geom or the .md file is in atomic units.
     They are converted in ASE units, i.e., Å (length), eV (energy), Da (mass).
+
+    Stress in the .geom or the .md file includes kinetic contribution, which is
+    subtracted in ``atoms.calc``.
+
     """
     if isinstance(index, str):
         index = string2index(index)
@@ -118,6 +122,9 @@ def _read_atoms(lines: List[str], parser: Parser) -> Atoms:
         factor = units['a0'] * sqrt(units['me'] / units['Eh'])
         atoms.info['time'] = float(lines[0].split()[0]) * factor  # au -> ASE
         atoms.set_velocities(velocities)
+
+    if stress is not None:
+        stress -= atoms.get_kinetic_stress(voigt=True)
 
     # The energy in .geom or .md file is the force-consistent one
     # (possibly with the the finite-basis-set correction when, e.g.,
@@ -251,7 +258,9 @@ def write_castep_geom(
 
     Notes
     -----
-    Values in the .geom file are in atomic units.
+    - Values in the .geom file are in atomic units.
+    - Stress is printed including kinetic contribution.
+
     """
     if isinstance(images, Atoms):
         images = [images]
@@ -309,7 +318,9 @@ def write_castep_md(
 
     Notes
     -----
-    Values in the .md file are in atomic units.
+    - Values in the .md file are in atomic units.
+    - Stress is printed including kinetic contribution.
+
     """
     if isinstance(images, Atoms):
         images = [images]
@@ -459,15 +470,22 @@ def _write_cell_velocities(fd: TextIO, atoms: Atoms, units: Dict[str, float]):
 
 
 def _write_stress(fd: TextIO, atoms: Atoms, units: Dict[str, float]):
-    hartree = units['Eh']
-    bohr = units['a0']
     if atoms.calc is None:
         return
-    if atoms.calc.results.get('stress') is None:
+
+    stress = atoms.calc.results.get('stress')
+    if stress is None:
         return
-    stress = atoms.calc.results.get('stress') / (hartree / bohr**3)  # Voigt
+
     if stress.shape != (3, 3):
-        stress = voigt_6_to_full_3x3_stress(stress)  # matrix
+        stress = voigt_6_to_full_3x3_stress(stress)
+
+    stress += atoms.get_kinetic_stress(voigt=False)
+
+    hartree = units['Eh']
+    bohr = units['a0']
+    stress /= (hartree / bohr**3)  # eV/Å^3 -> atomic unit (hartree/bohr^3)
+
     for i in range(3):
         fd.write(18 * ' ')
         for j in range(3):
