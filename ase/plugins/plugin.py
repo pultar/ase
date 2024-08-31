@@ -124,9 +124,9 @@ class Plugins(Listing):
         return "Plugins:\n"\
                "--------\n" + super().info(prefix, opts, filter)
 
-    def create_plugin(self, module, name):
-        """ A factory method to create a plugin """
-        return Plugin(self, module, name)
+    def create_plugin(self, module, name=None):
+        """ A factory method to create a plugin. """
+        return Plugin(self, module, name=None)
 
 
 class Plugin:
