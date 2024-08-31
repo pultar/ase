@@ -19,12 +19,12 @@ my_cool_package="my_cool_package.ase.register"
 ```
 """
 
-from .. import plugins
-
 import importlib
+import sys
 import warnings
 from importlib.metadata import entry_points
-import sys
+
+from .. import plugins
 
 
 def ase_register_ex():
@@ -46,7 +46,7 @@ def ase_register_ex():
               return
         epoints = epoints['ase.plugins']
     else:
-        epoints = entry_points(group = 'ase.plugins')
+        epoints = entry_points(group='ase.plugins')
     for epoint in epoints:
         module = import_plugin_module(epoint.name, epoint.value)
         if module:

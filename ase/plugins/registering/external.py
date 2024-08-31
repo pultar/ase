@@ -28,12 +28,12 @@ forwarded to `my_package.viewer.view_my_viewer` function.
 """
 
 import warnings
-from ase.plugins import register_calculator
-from ase.io.formats import define_io_format
-from ase.visualize.viewers import define_viewer
-from ase.utils.plugins import ExternalIOFormat
-from ase.utils.plugins import ExternalViewer
 from importlib.metadata import entry_points
+
+from ase.io.formats import define_io_format
+from ase.plugins import register_calculator
+from ase.utils.plugins import ExternalIOFormat, ExternalViewer
+from ase.visualize.viewers import define_viewer
 
 plugin_name = 'external'
 

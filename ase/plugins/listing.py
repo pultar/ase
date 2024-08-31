@@ -4,10 +4,11 @@ standard dict, they allow to better finding of their items
 (see the ``filter``  method).
 """
 
-from collections.abc import Mapping
-from ase.utils import lazyproperty
-from typing import Dict, Optional, Callable
 from collections import defaultdict
+from collections.abc import Mapping
+from typing import Callable, Dict, Optional
+
+from ase.utils import lazyproperty
 
 
 def _item_attribute(obj, attribute):

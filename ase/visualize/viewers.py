@@ -21,11 +21,11 @@ from importlib import import_module
 from io import BytesIO
 from pathlib import Path
 
-from ase.plugins.listing import LazyListing
-from ase.utils import lazyproperty
 import ase.io
+from ase.plugins.listing import LazyListing
 from ase.plugins.pluggables import BasePluggable, Pluggables
 from ase.plugins.register import register_function
+from ase.utils import lazyproperty
 
 
 class UnknownViewerError(Exception):

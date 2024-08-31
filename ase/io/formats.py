@@ -26,7 +26,6 @@ from pathlib import Path, PurePath
 from typing import (
     IO,
     Any,
-    Dict,
     Iterable,
     List,
     Optional,
@@ -34,15 +33,15 @@ from typing import (
     Tuple,
     Union,
 )
-from ase.utils import lazyproperty
-from ase.plugins.pluggables import BasePluggable, Pluggables
-from ase.plugins.listing import ListingView
-from ase.plugins.register import register_function
+
+import numpy as np
 
 from ase.atoms import Atoms
 from ase.parallel import parallel_function, parallel_generator
-from ase.utils import string2index
-import numpy as np
+from ase.plugins.listing import ListingView
+from ase.plugins.pluggables import BasePluggable, Pluggables
+from ase.plugins.register import register_function
+from ase.utils import lazyproperty, string2index
 
 PEEK_BYTES = 50000
 

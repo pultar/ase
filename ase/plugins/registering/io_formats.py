@@ -1,6 +1,6 @@
 """ This module registers all built-in io-formats. """
 
-from ..register import register_io_format, define_to_register
+from ..register import define_to_register, register_io_format
 
 F = define_to_register(register_io_format)
 

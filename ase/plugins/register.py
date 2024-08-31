@@ -1,10 +1,12 @@
 """ This modules contains functions for creating and registering
 the Pluggables (calculators, viewers etc....) """
 
-from .plugin import get_currently_registered_plugin
 import functools
-from typing import Tuple, List, Union, Optional
+from typing import List, Optional, Tuple, Union
+
 import numpy as np
+
+from .plugin import get_currently_registered_plugin
 
 
 def _register(pluggable_type: str, cls: str, name=None):

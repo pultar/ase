@@ -1,7 +1,8 @@
 """ This module registers all built-in viewer. """
 
-from ..register import register_viewer
 import sys
+
+from ..register import register_viewer
 
 
 def F(*args, **kwargs):
