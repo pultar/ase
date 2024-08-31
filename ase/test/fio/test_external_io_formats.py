@@ -4,14 +4,15 @@ outside of the ase package
 """
 import copy
 import io
+import sys
 from importlib.metadata import EntryPoint
 
 import pytest
 
 from ase.build import bulk
 from ase.io import formats, read, write
-from ase.plugins.registering.external import define_external_io_format
 from ase.utils.plugins import ExternalIOFormat
+from ase.plugins import plugins
 
 
 @pytest.fixture(autouse=True)
@@ -38,6 +39,16 @@ def read_dummy(file):
 
 def write_dummy(file, atoms):
     file.write("dummy output")
+
+
+plugin=None
+
+
+def define_external_io_format(entry_point):
+    global plugin
+    if not plugin:
+        plugin = plugins.create_plugin(sys.modules[__name__])
+    plugin.register_external_io_format(entry_point)
 
 
 def test_external_ioformat_valid(tmp_path):

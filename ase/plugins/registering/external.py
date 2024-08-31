@@ -35,18 +35,20 @@ from importlib.metadata import entry_points
 plugin_name = 'external'
 
 
+def register_external_io_format(plugin, entry_point):
+    """ Used in test """
+
+    fmt = entry_point.load()
+    # if entry_point.name in ioformats:
+    #    raise ValueError(f'Format {entry_point.name} already defined')
+    if not isinstance(fmt, ExternalIOFormat):
+        raise TypeError('Wrong type for registering external IO formats '
+                        f'in format {entry_point.name}, expected '
+                        'ExternalIOFormat')
+    return plugin.register_io_format(name=entry_point.name, **fmt._asdict(), external=True)
+
+
 def _register_external_io_formats(plugin, group):
-
-    def define_external_io_format(entry_point):
-
-        fmt = entry_point.load()
-        # if entry_point.name in ioformats:
-        #    raise ValueError(f'Format {entry_point.name} already defined')
-        if not isinstance(fmt, ExternalIOFormat):
-            raise TypeError('Wrong type for registering external IO formats '
-                            f'in format {entry_point.name}, expected '
-                            'ExternalIOFormat')
-        return plugin.register_io_format(name=entry_point.name, **fmt._asdict(), external=True)
 
     if hasattr(entry_points(), 'select'):
         fmt_entry_points = entry_points().select(group=group)
@@ -55,7 +57,7 @@ def _register_external_io_formats(plugin, group):
 
     for entry_point in fmt_entry_points:
         try:
-            define_external_io_format(entry_point)
+            register_external_io_format(plugin, entry_point)
         except Exception as exc:
             warnings.warn(
                 'Failed to register external '
