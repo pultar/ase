@@ -92,9 +92,9 @@ class Plugins(Listing):
         return "Plugins:\n"\
                "--------\n" + super().info(prefix, opts, filter)
 
-    def create_plugin(self, module, name):
-        """ A factory method to create a plugin """
-        return Plugin(self, module, name)
+    def create_plugin(self, module, name=None):
+        """ A factory method to create a plugin. """
+        return Plugin(self, module, name=None)
 
 
 class Plugin:
@@ -128,8 +128,12 @@ class Plugin:
         __init__.py of the plugin package
         """
         if not self.registered:
-            if hasattr(self.package, 'ase_register'):
-                self.package.ase_register(self)
+            try:
+                if hasattr(self.package, 'ase_register'):
+                   self.package.ase_register()
+            except Exception as e:
+                #warnings.warn(f"Can not register plugin {self} because of {e}")
+                pass
             self.registered = True
             self.plugins.register(self)
 

@@ -49,9 +49,12 @@ def read_aims(fd, apply_constraints=True):
 def parse_geometry_lines(lines, apply_constraints=True):
 
     from ase import Atoms
-    from ase.constraints import (FixAtoms, FixCartesian,
-                                 FixCartesianParametricRelations,
-                                 FixScaledParametricRelations)
+    from ase.constraints import (
+        FixAtoms,
+        FixCartesian,
+        FixCartesianParametricRelations,
+        FixScaledParametricRelations,
+    )
 
     atoms = Atoms()
 
@@ -376,8 +379,10 @@ def write_aims(
 
 def get_sym_block(atoms):
     """Get symmetry block for Parametric constraints in atoms.constraints"""
-    from ase.constraints import (FixCartesianParametricRelations,
-                                 FixScaledParametricRelations)
+    from ase.constraints import (
+        FixCartesianParametricRelations,
+        FixScaledParametricRelations,
+    )
 
     # Initialize param/expressions lists
     atomic_sym_params = []
@@ -484,7 +489,7 @@ def format_aims_control_parameter(key, value, format="%s"):
     str
         The properly formatted line for the aims control.in
     """
-    return f"{key :35s}" + (format % value) + "\n"
+    return f"{key:35s}" + (format % value) + "\n"
 
 
 # Write aims control.in files
@@ -1403,7 +1408,7 @@ class AimsOutCalcChunk(AimsOutChunk):
                 self.lines[occ_start + 1:occ_start + self.n_bands + 1]
             ):
                 if "***" in line:
-                    warn_msg = f"The {ll+1}th eigenvalue for the "
+                    warn_msg = f"The {ll + 1}th eigenvalue for the "
                     "{kpt_ind+1}th k-point and {spin}th channels could "
                     "not be read (likely too large to be printed "
                     "in the output file)"
