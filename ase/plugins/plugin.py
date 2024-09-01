@@ -130,7 +130,7 @@ class Plugins(Listing):
 
     def create_plugin(self, module, name=None):
         """ A factory method to create a plugin. """
-        return Plugin(self, module, name=None)
+        return Plugin(self, module, name)
 
 
 class Plugin:
