@@ -148,6 +148,7 @@ class Plugin:
         if name is None:
             name = self.package.__name__[12:]   # get rig 'ase.plugins'
         self.name = name
+        self.broken = False
 
     def add_pluggable(self, pluggable):
         """ Called by Pluggable.register() """
@@ -169,6 +170,7 @@ class Plugin:
                     with within_the_plugin(self):
                         self.package.ase_register()
             except Exception as e:
+                self.broken = True
                 warnings.warn(f"Can not register plugin {self} because of {e}")
             self.registered = True
             self.plugins.register(self)
@@ -179,6 +181,9 @@ class Plugin:
         prefix += '  '
         opts = opts.copy()
         opts['plugin'] = False
+
+        if self.broken:
+            info +=' (broken)'
 
         for pluggables in self.plugins.all_pluggables():
             itype = pluggables.class_type
