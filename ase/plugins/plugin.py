@@ -98,7 +98,7 @@ class Plugins(Listing):
 
     def create_plugin(self, module, name=None):
         """ A factory method to create a plugin. """
-        return Plugin(self, module, name=None)
+        return Plugin(self, module, name)
 
 
 class Plugin:
@@ -116,6 +116,7 @@ class Plugin:
         if name is None:
             name = self.package.__name__[12:]   # get rig 'ase.plugins'
         self.name = name
+        self.broken = False
 
     def add_pluggable(self, pluggable):
         """ Called by Pluggable.register() """
@@ -136,6 +137,7 @@ class Plugin:
                 if hasattr(self.package, 'ase_register'):
                     self.package.ase_register(self)
             except Exception as e:
+                self.broken = True
                 warnings.warn(f"Can not register plugin {self} because of {e}")
             self.registered = True
             self.plugins.register(self)
@@ -146,6 +148,9 @@ class Plugin:
         prefix += '  '
         opts = opts.copy()
         opts['plugin'] = False
+
+        if self.broken:
+            info +=' (broken)'
 
         for pluggables in self.plugins.all_pluggables():
             itype = pluggables.class_type
