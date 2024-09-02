@@ -48,7 +48,16 @@ def define_external_io_format(entry_point):
     global plugin
     if not plugin:
         plugin = plugins.create_plugin(sys.modules[__name__])
-    plugin.register_external_io_format(entry_point)
+
+    fmt = entry_point.load()
+    # if entry_point.name in ioformats:
+    #    raise ValueError(f'Format {entry_point.name} already defined')
+    if not isinstance(fmt, ExternalIOFormat):
+        raise TypeError('Wrong type for registering external IO formats '
+                        f'in format {entry_point.name}, expected '
+                        'ExternalIOFormat')
+    plugin.register_io_format(name=entry_point.name, **fmt._asdict(),
+                         external=True)
 
 
 def test_external_ioformat_valid(tmp_path):
