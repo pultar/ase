@@ -150,7 +150,7 @@ class Plugin:
         opts['plugin'] = False
 
         if self.broken:
-            info +=' (broken)'
+            info += ' (broken)'
 
         for pluggables in self.plugins.all_pluggables():
             itype = pluggables.class_type
