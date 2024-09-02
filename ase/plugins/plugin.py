@@ -198,7 +198,8 @@ class Plugin:
                            allowed_pbc: Optional[List[
                                Union[str, bytes, np.ndarray, List, Tuple]
                            ]] = None):
-        """ Just a wrapper for :func:`ioformats.define_io_format`.
+        """ Use this method to define and register an input/output format,
+        instead of old :func:`ioformats.define_io_format`.
         The order of parameters is however slightly different here,
         to be as much as possible similiar to the :func:`register_calculator`
 
@@ -220,6 +221,7 @@ class Plugin:
 
     def register_viewer(self, name, desc, *, module=None, cli=False, fmt=None,
                         argv=None, external=True):
+        """ Register a new viewer """
         viewer = viewers.define_viewer(name, desc, module=module, cli=cli,
                                      fmt=fmt, argv=argv, external=external)
         viewer.register(self)

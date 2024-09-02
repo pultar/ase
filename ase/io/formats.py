@@ -375,6 +375,11 @@ def define_io_format(name, desc, code, *, module=None, ext=None,
                      allowed_pbc: Optional[
                          List[Union[str, bytes, np.ndarray, List, Tuple]]
                      ] = None):
+    """
+    Deprecated function for defining a new input/output format.
+    Please, Use the new plugin mechanism and `plugin.register_io_format`
+    instead.
+    """
     if module is None:
         module = name.replace('-', '_')
         format2modulename[name] = module
