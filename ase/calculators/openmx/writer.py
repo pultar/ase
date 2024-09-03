@@ -71,7 +71,7 @@ def write_openmx(label=None, atoms=None, parameters=None, properties=None,
                         write(fd, omx_keyword, filtered_keywords[fltrd_keyword])
 
 
-def parameters_to_keywords(label=None, atoms=None, parameters:dict={},
+def parameters_to_keywords(label=None, atoms=None, parameters=None,
                            properties=None, system_changes=None):
     """
     Before writing `label.dat` file, set up the ASE variables to OpenMX
