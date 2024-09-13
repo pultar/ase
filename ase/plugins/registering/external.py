@@ -76,7 +76,7 @@ def _register_external_viewer_formats(plugin, group):
         #    raise ValueError(f"Format {entry_point.name} already defined")
         if not isinstance(viewer_def, ExternalViewer):
             raise TypeError(
-                "Wrong type for registering external IO formats "
+                "Wrong type for registering external Viewer"
                 f"in format {entry_point.name}, expected "
                 "ExternalViewer"
             )
