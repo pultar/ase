@@ -113,9 +113,6 @@ class BaseListing(Mapping):
     def _sorting_key(i):
         return i.name.lower()
 
-    def items(self):
-        return self._items.items()
-
     @lazyproperty
     def sorted(self):
         """ Return items in the listing, sorted by a predefined criteria """
