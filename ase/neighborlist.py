@@ -971,11 +971,16 @@ class PrimitiveNeighborList:
         self.cell = cell = Cell(cell)
         self.coordinates = coordinates = np.array(coordinates, copy=True)
 
-        if len(self.cutoffs) != len(coordinates):
-            raise ValueError('Wrong number of cutoff radii: {} != {}'
-                             .format(len(self.cutoffs), len(coordinates)))
+        if np.isscalar(self.cutoffs):
+            cutoffs = np.full(len(coordinates), 0.5 * self.cutoffs)
+        else:
+            cutoffs = self.cutoffs
 
-        if len(self.cutoffs) > 0:
+        if len(cutoffs) != len(coordinates):
+            raise ValueError('Wrong number of cutoff radii: {} != {}'
+                             .format(len(cutoffs), len(coordinates)))
+
+        if len(cutoffs) > 0:
             rcmax = self.cutoffs.max()
         else:
             rcmax = 0.0
@@ -1022,14 +1027,14 @@ class PrimitiveNeighborList:
             for a in range(natoms):
 
                 indices = tree.query_ball_point(positions[a] - displacement,
-                                                r=self.cutoffs[a] + rcmax)
-                if not len(indices):
+                                                r=cutoffs[a] + rcmax)
+                if not indices:
                     continue
 
                 indices = np.array(indices)
                 delta = positions[indices] + displacement - positions[a]
-                cutoffs = self.cutoffs[indices] + self.cutoffs[a]
-                i = indices[np.linalg.norm(delta, axis=1) < cutoffs]
+                cs = cutoffs[indices] + cutoffs[a]
+                i = indices[np.linalg.norm(delta, axis=1) < cs]
                 if n1 == 0 and n2 == 0 and n3 == 0:
                     if self.self_interaction:
                         i = i[i >= a]
