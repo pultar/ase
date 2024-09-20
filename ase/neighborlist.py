@@ -1,3 +1,45 @@
+"""
+==============
+Neighbor lists
+==============
+
+A neighbor list is a collision detector for spheres:
+given a number of spheres of different radius located at different points,
+it calculates the pairs of spheres that overlap.
+
+ASE provides several approaches to construct neighbor lists:
+
+1. Class-based approach
+
+   1. :class:`~ase.neighborlist.PrimitiveNeighborList`:
+      Stable and scales as :math:`O(n \\log n)`.
+   2. :class:`~ase.neighborlist.NewPrimitiveNeighborList`:
+      Scales as :math:`O(n)` but might fail in some extreme cases.
+   3. :class:`~ase.neighborlist.NeighborList`:
+      Wrapper class of the above two "primitive" classes.
+
+* For the two "primitive" classes, we update the system by
+  ``update(atoms.pbc, atoms.cell, atoms.positions)`` and then get the neighbor
+  list of the ``i``-th atom with cell offsets by ``get_neighbors(i)``.
+* For the wrapper :class:`~ase.neighborlist.NeighborList`: class, we instead
+  give an :class:`~ase.atoms.Atoms` object to the ``update()`` method.
+
+2. Function-based approach
+
+   1. :func:`~ase.neighborlist.neighbor_list`:
+      Backend of :class:`~ase.neighborlist.NewPrimitiveNeighborList`.
+   2. :func:`~ase.neighborlist.build_neighbor_list`:
+      Wrapper funcion to construct :class:`~ase.neighborlist.NeighborList`
+      possibly with default cutoffs provided by
+      :meth:`~ase.neighborlist.natural_cutoffs`.
+
+Further, the following helper functions provide access to some derived results
+like graph-analysis etc.:
+
+* :meth:`~ase.neighborlist.get_connectivity_matrix`
+* :meth:`~ase.neighborlist.get_distance_matrix`
+* :meth:`~ase.neighborlist.get_distance_indices`
+"""
 import itertools
 from typing import List, Union
 
@@ -919,9 +961,15 @@ class NewPrimitiveNeighborList:
 class PrimitiveNeighborList:
     """Neighbor list that works without Atoms objects.
 
-    This is less fancy, but can be used to avoid conversions between
+    Since ASE 3.19.0, this class finds the neighbors using
+    :class:`scipy.spatial.KDTree` and should scale as :math:`O(n \\log n)`
+    (see https://gitlab.com/ase/ase/-/merge_requests/1410).
+    This class can also be used to avoid conversions between
     scaled and non-scaled coordinates which may affect cell offsets
     through rounding errors.
+
+    .. note::
+       Prior to ASE 3.19.0, a simple search scaling as :math:`O(n^2)` was used.
 
     Attributes
     ----------
