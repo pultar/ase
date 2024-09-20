@@ -1,10 +1,12 @@
 import itertools
+from typing import List, Union
 
 import numpy as np
 import scipy.sparse.csgraph as csgraph
 from scipy import sparse as sp
 from scipy.spatial import cKDTree
 
+from ase import Atoms
 from ase.cell import Cell
 from ase.data import atomic_numbers, covalent_radii
 from ase.geometry import (
@@ -15,38 +17,45 @@ from ase.geometry import (
 )
 
 
-def natural_cutoffs(atoms, mult=1, **kwargs):
+def natural_cutoffs(atoms: Atoms, mult: float = 1.0, **kwargs) -> list:
     """Generate a radial cutoff for every atom based on covalent radii.
 
     The covalent radii are a reasonable cutoff estimation for bonds in
     many applications such as neighborlists, so function generates an
     atoms length list of radii based on this idea.
 
-    * atoms: An atoms object
-    * mult: A multiplier for all cutoffs, useful for coarse grained adjustment
-    * kwargs: Symbol of the atom and its corresponding cutoff,
-      used to override the covalent radii
+    Parameters
+    ----------
+    atoms : :class:`~ase.Atoms`
+    mult : float
+        A multiplier for all cutoffs, useful for coarse grained adjustment
+    kwargs : Symbol of the atom and its corresponding cutoff,
+        used to override the covalent radii
     """
     return [kwargs.get(atom.symbol, covalent_radii[atom.number] * mult)
             for atom in atoms]
 
 
-def build_neighbor_list(atoms, cutoffs=None, **kwargs):
+def build_neighbor_list(
+    atoms: Atoms,
+    cutoffs: Union[List[float], None] = None,
+    **kwargs,
+):
     """Automatically build and update a NeighborList.
 
-    Parameters:
-
-    atoms : :class:`~ase.Atoms` object
+    Parameters
+    ----------
+    atoms : :class:`~ase.Atoms`
         Atoms to build Neighborlist for.
-    cutoffs: list of floats
+    cutoffs : list[float]
         Radii for each atom. If not given it will be produced by calling
         :func:`ase.neighborlist.natural_cutoffs`
-    kwargs: arbitrary number of options
+    kwargs : arbitrary number of options
         Will be passed to the constructor of
         :class:`~ase.neighborlist.NeighborList`
 
-    Returns:
-
+    Returns
+    -------
     return: :class:`~ase.neighborlist.NeighborList`
         A :class:`~ase.neighborlist.NeighborList` instance (updated).
     """
@@ -59,23 +68,23 @@ def build_neighbor_list(atoms, cutoffs=None, **kwargs):
     return nl
 
 
-def get_distance_matrix(graph, limit=3):
+def get_distance_matrix(graph, limit: int = 3):
     """Get Distance Matrix from a Graph.
 
-    Parameters:
-
-    graph: array, matrix or sparse matrix, 2 dimensions (N, N)
+    Parameters
+    ----------
+    graph : array, matrix or sparse matrix, 2 dimensions (N, N)
         Graph representation of the connectivity.
         See `scipy doc <https://docs.scipy.org/doc/scipy/reference/generated\
 /scipy.sparse.csgraph.dijkstra.html#scipy.sparse.csgraph.dijkstra>`_
         for reference.
-    limit: integer
+    limit : int
         Maximum number of steps to analyze. For most molecular information,
         three should be enough.
 
-    Returns:
-
-    return: scipy.sparse.csr_matrix, shape (N, N)
+    Returns
+    -------
+    scipy.sparse.csr_matrix, shape (N, N)
         A scipy.sparse.csr_matrix. All elements that are not connected within
         *limit* steps are set to zero.
 
@@ -90,20 +99,20 @@ def get_distance_matrix(graph, limit=3):
     return sp.csr_matrix(mat, dtype=np.int8)
 
 
-def get_distance_indices(distanceMatrix, distance):
+def get_distance_indices(distanceMatrix, distance: int):
     """Get indices for each node that are distance or less away.
 
-    Parameters:
-
-    distanceMatrix: any one of scipy.sparse matrices (NxN)
+    Parameters
+    ----------
+    distanceMatrix : any one of scipy.sparse matrices (NxN)
         Matrix containing distance information of atoms. Get it e.g. with
         :func:`~ase.neighborlist.get_distance_matrix`
-    distance: integer
+    distance : int
         Number of steps to allow.
 
-    Returns:
-
-    return: list of length N
+    Returns
+    -------
+    indices : list of length N
         List of length N. return[i] has all indices connected to item i.
 
     The distance matrix only contains shortest paths, so when looking for
@@ -124,12 +133,11 @@ def get_distance_indices(distanceMatrix, distance):
     return indices
 
 
-def mic(dr, cell, pbc=True):
-    """
-    Apply minimum image convention to an array of distance vectors.
+def mic(dr: np.ndarray, cell, pbc=True) -> np.ndarray:
+    """Apply minimum image convention to an array of distance vectors.
 
-    Parameters:
-
+    Parameters
+    ----------
     dr : array_like
         Array of distance vectors.
     cell : array_like
@@ -138,8 +146,8 @@ def mic(dr, cell, pbc=True):
         Periodic boundary conditions in x-, y- and z-direction. Default is to
         assume periodic boundaries in all directions.
 
-    Returns:
-
+    Returns
+    -------
     dr : array
         Array of distance vectors, wrapped according to the minimum image
         convention.
@@ -160,9 +168,9 @@ def primitive_neighbor_list(quantities, pbc, cell, positions, cutoff,
     The neighbor list is sorted by first atom index 'i', but not by second
     atom index 'j'.
 
-    Parameters:
-
-    quantities: str
+    Parameters
+    ----------
+    quantities : str
         Quantities to compute by the neighbor list algorithm. Each character
         in this string defines a quantity. They are returned in a tuple of
         the same order. Possible quantities are
@@ -175,16 +183,16 @@ def primitive_neighbor_list(quantities, pbc, cell, positions, cutoff,
               between atom i and j). With the shift vector S, the
               distances D between atoms can be computed from:
               D = positions[j]-positions[i]+S.dot(cell)
-    pbc: array_like
+    pbc : array_like
         3-tuple indicating giving periodic boundaries in the three Cartesian
         directions.
-    cell: 3x3 matrix
+    cell : 3x3 matrix
         Unit cell vectors.
-    positions: list of xyz-positions
+    positions : list of xyz-positions
         Atomic positions.  Anything that can be converted to an ndarray of
         shape (n, 3) will do: [(x1,y1,z1), (x2,y2,z2), ...]. If
         use_scaled_positions is set to true, this must be scaled positions.
-    cutoff: float or dict
+    cutoff : float | dict
         Cutoff for neighbor search. It can be:
 
             * A single float: This is a global cutoff for all elements.
@@ -196,17 +204,17 @@ def primitive_neighbor_list(quantities, pbc, cell, positions, cutoff,
               within each others neighborhood. See
               :func:`~ase.neighborlist.natural_cutoffs`
               for an example on how to get such a list.
-    self_interaction: bool
+    self_interaction : bool
         Return the atom itself as its own neighbor if set to true.
         Default: False
-    use_scaled_positions: bool
+    use_scaled_positions : bool
         If set to true, positions are expected to be scaled positions.
-    max_nbins: int
+    max_nbins : int
         Maximum number of bins used in neighbor search. This is used to limit
         the maximum amount of memory required by the neighbor list.
 
-    Returns:
-
+    Returns
+    -------
     i, j, ... : array
         Tuple with arrays for each quantity specified above. Indices in `i`
         are returned in ascending order 0..len(a)-1, but the order of (i,j)
@@ -520,8 +528,13 @@ def primitive_neighbor_list(quantities, pbc, cell, positions, cutoff,
         return tuple(retvals)
 
 
-def neighbor_list(quantities, a, cutoff, self_interaction=False,
-                  max_nbins=1e6):
+def neighbor_list(
+    quantities: str,
+    a: Atoms,
+    cutoff: Union[float, dict],
+    self_interaction: bool = False,
+    max_nbins: int = 1_000_000,
+):
     """Compute a neighbor list for an atomic configuration.
 
     Atoms outside periodic boundaries are mapped into the box. Atoms
@@ -531,9 +544,9 @@ def neighbor_list(quantities, a, cutoff, self_interaction=False,
     The neighbor list is sorted by first atom index 'i', but not by second
     atom index 'j'.
 
-    Parameters:
-
-    quantities: str
+    Parameters
+    ----------
+    quantities : str
         Quantities to compute by the neighbor list algorithm. Each character
         in this string defines a quantity. They are returned in a tuple of
         the same order. Possible quantities are:
@@ -546,9 +559,9 @@ def neighbor_list(quantities, a, cutoff, self_interaction=False,
              between atom i and j). With the shift vector S, the
              distances D between atoms can be computed from:
              D = a.positions[j]-a.positions[i]+S.dot(a.cell)
-    a: :class:`ase.Atoms`
+    a : :class:`ase.Atoms`
         Atomic configuration.
-    cutoff: float or dict
+    cutoff: float | dict | list[float]
         Cutoff for neighbor search. It can be:
 
             * A single float: This is a global cutoff for all elements.
@@ -561,22 +574,22 @@ def neighbor_list(quantities, a, cutoff, self_interaction=False,
               :func:`~ase.neighborlist.natural_cutoffs`
               for an example on how to get such a list.
 
-    self_interaction: bool
+    self_interaction : bool
         Return the atom itself as its own neighbor if set to true.
         Default: False
-    max_nbins: int
+    max_nbins : int
         Maximum number of bins used in neighbor search. This is used to limit
         the maximum amount of memory required by the neighbor list.
 
-    Returns:
-
+    Returns
+    -------
     i, j, ...: array
         Tuple with arrays for each quantity specified above. Indices in `i`
         are returned in ascending order 0..len(a), but the order of (i,j)
         pairs is not guaranteed.
 
-    Examples:
-
+    Examples
+    --------
     Examples assume Atoms object *a* and numpy imported as *np*.
 
     1. Coordination counting::
@@ -638,21 +651,21 @@ def neighbor_list(quantities, a, cutoff, self_interaction=False,
                                    max_nbins=max_nbins)
 
 
-def first_neighbors(natoms, first_atom):
+def first_neighbors(natoms: int, first_atom) -> np.ndarray:
     """
     Compute an index array pointing to the ranges within the neighbor list that
     contain the neighbors for a certain atom.
 
-    Parameters:
-
+    Parameters
+    ----------
     natoms : int
         Total number of atom.
     first_atom : array_like
         Array containing the first atom 'i' of the neighbor tuple returned
         by the neighbor list.
 
-    Returns:
-
+    Returns
+    -------
     seed : array
         Array containing pointers to the start and end location of the
         neighbors of a certain atom. Neighbors of atom k have indices from s[k]
@@ -688,7 +701,7 @@ def first_neighbors(natoms, first_atom):
     return seed
 
 
-def get_connectivity_matrix(nl, sparse=True):
+def get_connectivity_matrix(nl, sparse: bool = True):
     """Return connectivity matrix for a given NeighborList (dtype=numpy.int8).
 
     A matrix of shape (nAtoms, nAtoms) will be returned.
@@ -702,8 +715,8 @@ def get_connectivity_matrix(nl, sparse=True):
     Note that the old and new neighborlists might give different results
     for periodic systems if bothways=False.
 
-    Example:
-
+    Examples
+    --------
     Determine which molecule in a system atom 1 belongs to.
 
     >>> from scipy import sparse
@@ -757,27 +770,29 @@ def get_connectivity_matrix(nl, sparse=True):
 class NewPrimitiveNeighborList:
     """Neighbor list object. Wrapper around neighbor_list and first_neighbors.
 
-    cutoffs: list of float
+    Parameters
+    ----------
+    cutoffs : float | list[float]
         List of cutoff radii - one for each atom. If the spheres (defined by
         their cutoff radii) of two atoms overlap, they will be counted as
         neighbors.
-    skin: float
+    skin : float
         If no atom has moved more than the skin-distance since the
         last call to the
         :meth:`~ase.neighborlist.NewPrimitiveNeighborList.update()`
         method, then the neighbor list can be reused. This will save
         some expensive rebuilds of the list, but extra neighbors outside
         the cutoff will be returned.
-    sorted: bool
+    sorted : bool
         Sort neighbor list.
-    self_interaction: bool
+    self_interaction : bool
         Should an atom return itself as a neighbor?
-    bothways: bool
+    bothways : bool
         Return all neighbors.  Default is to return only "half" of
         the neighbors.
 
-    Example:
-
+    Examples
+    --------
     >>> from ase.build import bulk
     >>> from ase.neighborlist import NewPrimitiveNeighborList
 
@@ -788,8 +803,15 @@ class NewPrimitiveNeighborList:
     >>> indices, offsets = nl.get_neighbors(0)
     """
 
-    def __init__(self, cutoffs, skin=0.3, sorted=False, self_interaction=True,
-                 bothways=False, use_scaled_positions=False):
+    def __init__(
+        self,
+        cutoffs,
+        skin: float = 0.3,
+        sorted: bool = False,
+        self_interaction: bool = True,
+        bothways: bool = False,
+        use_scaled_positions: bool = False,
+    ):
         self.cutoffs = np.asarray(cutoffs) + skin
         self.skin = skin
         self.sorted = sorted
@@ -800,7 +822,7 @@ class NewPrimitiveNeighborList:
         self.nneighbors = 0
         self.npbcneighbors = 0
 
-    def update(self, pbc, cell, positions, numbers=None):
+    def update(self, pbc, cell, positions, numbers=None) -> bool:
         """Make sure the list is up to date."""
 
         if self.nupdates == 0:
@@ -857,7 +879,7 @@ class NewPrimitiveNeighborList:
 
         self.nupdates += 1
 
-    def get_neighbors(self, a):
+    def get_neighbors(self, a: int) -> tuple:
         """Return neighbors of atom number a.
 
         A list of indices and offsets to neighboring atoms is
@@ -899,8 +921,15 @@ class PrimitiveNeighborList:
         Number of updated times.
     """
 
-    def __init__(self, cutoffs, skin=0.3, sorted=False, self_interaction=True,
-                 bothways=False, use_scaled_positions=False):
+    def __init__(
+        self,
+        cutoffs,
+        skin: float = 0.3,
+        sorted: bool = False,
+        self_interaction: bool = True,
+        bothways: float = False,
+        use_scaled_positions: float = False,
+    ):
         self.cutoffs = np.asarray(cutoffs) + skin
         self.skin = skin
         self.sorted = sorted
@@ -911,7 +940,7 @@ class PrimitiveNeighborList:
         self.nneighbors = 0
         self.npbcneighbors = 0
 
-    def update(self, pbc, cell, coordinates):
+    def update(self, pbc, cell, coordinates) -> bool:
         """Make sure the list is up to date.
 
         Returns
@@ -1045,7 +1074,7 @@ class PrimitiveNeighborList:
                 self.neighbors[a] = self.neighbors[a][mask]
                 self.displacements[a] = self.displacements[a][mask]
 
-    def get_neighbors(self, a):
+    def get_neighbors(self, a: int) -> tuple:
         """Return neighbors of atom number a.
 
         A list of indices and offsets to neighboring atoms is
@@ -1076,32 +1105,33 @@ class PrimitiveNeighborList:
 class NeighborList:
     """Neighbor list object.
 
-    cutoffs: list of float
+    Parameters
+    ----------
+    cutoffs : float | list[float]
         List of cutoff radii - one for each atom. If the spheres
         (defined by their cutoff radii) of two atoms overlap, they
         will be counted as neighbors. See
         :func:`~ase.neighborlist.natural_cutoffs` for an example on
         how to get such a list.
-
-    skin: float
+    skin : float
         If no atom has moved more than the skin-distance since the
         last call to the
         :meth:`~ase.neighborlist.NeighborList.update()` method, then
         the neighbor list can be reused.  This will save some
         expensive rebuilds of the list, but extra neighbors outside
         the cutoff will be returned.
-    self_interaction: bool
+    self_interaction : bool
         Should an atom return itself as a neighbor?
-    bothways: bool
+    bothways : bool
         Return all neighbors.  Default is to return only "half" of
         the neighbors.
-    primitive: class
+    primitive : class
         Define which implementation to use. Older and quadratically-scaling
         :class:`~ase.neighborlist.PrimitiveNeighborList` or newer and
         linearly-scaling :class:`~ase.neighborlist.NewPrimitiveNeighborList`.
 
-    Example:
-
+    Examples
+    --------
     >>> from ase.build import molecule
     >>> from ase.neighborlist import NeighborList
 
@@ -1113,13 +1143,20 @@ class NeighborList:
 
     """
 
-    def __init__(self, cutoffs, skin=0.3, sorted=False, self_interaction=True,
-                 bothways=False, primitive=PrimitiveNeighborList):
+    def __init__(
+        self,
+        cutoffs,
+        skin: float = 0.3,
+        sorted: float = False,
+        self_interaction: float = True,
+        bothways: float = False,
+        primitive=PrimitiveNeighborList,
+    ):
         self.nl = primitive(cutoffs, skin, sorted,
                             self_interaction=self_interaction,
                             bothways=bothways)
 
-    def update(self, atoms):
+    def update(self, atoms: Atoms) -> bool:
         """
         See :meth:`ase.neighborlist.PrimitiveNeighborList.update` or
         :meth:`ase.neighborlist.PrimitiveNeighborList.update`.
@@ -1127,7 +1164,7 @@ class NeighborList:
         return self.nl.update(atoms.pbc, atoms.get_cell(complete=True),
                               atoms.positions)
 
-    def get_neighbors(self, a):
+    def get_neighbors(self, a: int) -> tuple:
         """
         See :meth:`ase.neighborlist.PrimitiveNeighborList.get_neighbors` or
         :meth:`ase.neighborlist.PrimitiveNeighborList.get_neighbors`.
@@ -1138,23 +1175,23 @@ class NeighborList:
 
         return self.nl.get_neighbors(a)
 
-    def get_connectivity_matrix(self, sparse=True):
+    def get_connectivity_matrix(self, sparse: bool = True):
         """
         See :func:`~ase.neighborlist.get_connectivity_matrix`.
         """
         return get_connectivity_matrix(self.nl, sparse)
 
     @property
-    def nupdates(self):
+    def nupdates(self) -> int:
         """Get number of updates."""
         return self.nl.nupdates
 
     @property
-    def nneighbors(self):
+    def nneighbors(self) -> int:
         """Get number of neighbors."""
         return self.nl.nneighbors
 
     @property
-    def npbcneighbors(self):
+    def npbcneighbors(self) -> int:
         """Get number of pbc neighbors."""
         return self.nl.npbcneighbors
