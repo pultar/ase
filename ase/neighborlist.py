@@ -773,9 +773,17 @@ class NewPrimitiveNeighborList:
     Parameters
     ----------
     cutoffs : float | list[float]
-        List of cutoff radii - one for each atom. If the spheres (defined by
-        their cutoff radii) of two atoms overlap, they will be counted as
-        neighbors.
+        Cutoff radii of atoms.
+
+        - If ``float``, this is the cutoff radius for all the atoms.
+          For each atom, the atoms within the cutoff are counted as neighbors.
+        - If ``list[float]``, they are the cutoff radius for each atom.
+          If the spheres of two atoms defined by their cutoffs overlap,
+          the two atoms will be counted as neighbors.
+
+        Note that ``cutoff`` and ``[0.5 * cutoff, ..., 0.5 * cutoff]`` should
+        give equivalent results when ``skin == 0.0``.
+
     skin : float
         If no atom has moved more than the skin-distance since the
         last call to the
@@ -1113,11 +1121,17 @@ class NeighborList:
     Parameters
     ----------
     cutoffs : float | list[float]
-        List of cutoff radii - one for each atom. If the spheres
-        (defined by their cutoff radii) of two atoms overlap, they
-        will be counted as neighbors. See
-        :func:`~ase.neighborlist.natural_cutoffs` for an example on
-        how to get such a list.
+        Cutoff radii of atoms.
+
+        - If ``float``, this is the cutoff radius for all the atoms.
+          For each atom, the atoms within the cutoff are counted as neighbors.
+        - If ``list[float]``, they are the cutoff radius for each atom.
+          If the spheres of two atoms defined by their cutoffs overlap,
+          the two atoms will be counted as neighbors.
+
+        Note that ``cutoff`` and ``[0.5 * cutoff, ..., 0.5 * cutoff]`` should
+        give equivalent results when ``skin == 0.0``.
+
     skin : float
         If no atom has moved more than the skin-distance since the
         last call to the
