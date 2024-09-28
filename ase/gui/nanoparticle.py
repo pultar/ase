@@ -133,7 +133,7 @@ class SetupNanoparticle:
         self.no_update = True
         self.old_structure = 'fcc'
 
-        win = self.win = ui.Window(_('Nanoparticle'), wmtype='utility')
+        win = self.win = ui.Window(_('Nanoparticle'))
         win.add(ui.Text(introtext))
 
         self.element = Element('', self.apply)
