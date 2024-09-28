@@ -260,3 +260,29 @@ def test_small_cell_and_large_cutoff():
 
     assert np.all(n0 == n1)
     assert np.all(d0 == d1)
+
+
+@pytest.mark.parametrize(
+    'primitive',
+    [PrimitiveNeighborList, NewPrimitiveNeighborList],
+)
+def test_single_cutoff(primitive):
+    """Test if a single cutoff works in the same way as a list of half cutoffs.
+
+    https://gitlab.com/ase/ase/-/issues/1540
+    """
+    atoms = bulk('H', 'sc', a=1.0, cubic=True) * [2, 2, 2]
+
+    cutoff = 1.5
+    kwargs = {'skin': 0.0, 'self_interaction': False, 'bothways': True}
+
+    nl = primitive(cutoffs=[0.5 * cutoff] * len(atoms), **kwargs)
+    nl.update(atoms.pbc, atoms.cell, atoms.positions)
+    n0, d0 = nl.get_neighbors(0)
+
+    nl = primitive(cutoffs=cutoff, **kwargs)
+    nl.update(atoms.pbc, atoms.cell, atoms.positions)
+    n1, d1 = nl.get_neighbors(0)
+
+    np.testing.assert_array_equal(n0, n1)
+    np.testing.assert_array_equal(d0, d1)

@@ -28,6 +28,11 @@ default_role = 'math'
 pygments_style = 'sphinx'
 autoclass_content = 'both'
 modindex_common_prefix = ['ase.']
+intersphinx_mapping = {
+    'python': ('https://docs.python.org/3.10', None),
+    'gpaw': ('https://gpaw.readthedocs.io', None),
+    'numpy': ('https://numpy.org/doc/stable', None),
+    'scipy': ('https://docs.scipy.org/doc/scipy', None)}
 nitpick_ignore = [('envvar', 'VASP_PP_PATH'),
                   ('envvar', 'ASE_ABC_COMMAND'),
                   ('envvar', 'LAMMPS_COMMAND'),
@@ -50,8 +55,6 @@ latex_engine = 'xelatex'
 latex_documents = [
     ('index', 'ASE.tex', 'ASE', 'ASE-developers', 'howto', not True)]
 
-intersphinx_mapping = {'gpaw': ('https://gpaw.readthedocs.io', None),
-                       'python': ('https://docs.python.org/3.10', None)}
 
 # Avoid GUI windows during doctest:
 doctest_global_setup = """
