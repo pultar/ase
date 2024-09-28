@@ -96,7 +96,7 @@ def parameters_to_keywords(label=None, atoms=None, parameters=None,
         'band_kpath']
 
     directory, prefix = os.path.split(label)
-    curdir = os.path.join(os.getcwd(), prefix)
+    curdir = os.path.join(os.getcwd(), directory)
     counterparts = {
         'system_currentdirectory': curdir,
         'system_name': prefix,
@@ -195,6 +195,15 @@ def parameters_to_keywords(label=None, atoms=None, parameters=None,
     for key in matrix_keys:
         get_matrix_key = globals()['get_' + get_standard_key(key)]
         keywords[get_standard_key(key)] = get_matrix_key(atoms, parameters)
+
+    # drop unnecessary keywords for cluster calculation
+    drop_if_cluster = ['band', 'atoms_unitvectors']
+    if keywords['scf_eigenvaluesolver'].lower() == 'cluster':
+        for key in keywords.keys():
+            for needle in drop_if_cluster:
+                if needle in key:
+                    keywords[key] = None
+
     return OrderedDict([(k, v)for k, v in keywords.items()
                         if not (v is None or
                                 (isinstance(v, list) and v == []))])
