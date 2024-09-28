@@ -59,7 +59,8 @@ def set_windowtype(win, wmtype):
     # https://specifications.freedesktop.org/wm-spec/wm-spec-latest.html#idm45623487848608
     # you want dialog, normal or utility most likely
     if win._windowingsystem == "x11":
-        win.wm_attributes('-type', wmtype)
+        #win.wm_attributes('-type', wmtype)
+        pass
 
 
 class BaseWindow:
