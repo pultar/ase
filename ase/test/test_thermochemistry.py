@@ -1,7 +1,7 @@
 import numpy as np
 import pytest
 
-from ase import Atoms
+from ase import Atoms, units
 from ase.build import bulk, molecule
 from ase.calculators.emt import EMT
 from ase.optimize import QuasiNewton
@@ -11,6 +11,8 @@ from ase.thermochemistry import (
     HarmonicThermo,
     HinderedThermo,
     IdealGasThermo,
+    MSRRHOThermo,
+    QuasiHarmonicThermo,
 )
 from ase.vibrations import Vibrations
 
@@ -51,7 +53,7 @@ def test_ideal_gas_thermo_n2(testdir):
     assert thermo.geometry == "linear"
     assert thermo.get_ZPE_correction() == pytest.approx(0.07632373926263808)
     assert thermo.get_enthalpy(1000) == pytest.approx(0.6719935644272014)
-    assert thermo.get_entropy(1000, 1e8) == pytest.approx(0.0017861226676818658)
+    assert thermo.get_entropy(1e3, 1e8) == pytest.approx(0.0017861226676818658)
     assert thermo.get_gibbs_energy(1000, 1e8) == pytest.approx(
         thermo.get_enthalpy(1000) - 1000 * thermo.get_entropy(1000, 1e8)
     )
@@ -64,7 +66,7 @@ def ideal_gas_thermo_ch3(
     symmetrynumber=6,
     potentialenergy=0.0,
     spin=0.5,
-    ignore_imag_modes=False,
+    imag_modes_handling='error',
 ):
     if atoms is None:
         atoms = molecule("CH3")
@@ -75,7 +77,7 @@ def ideal_gas_thermo_ch3(
         symmetrynumber=symmetrynumber,
         potentialenergy=potentialenergy,
         spin=spin,
-        ignore_imag_modes=ignore_imag_modes,
+        imag_modes_handling=imag_modes_handling,
     )
 
 
@@ -108,7 +110,7 @@ def test_ideal_gas_thermo_ch3(testdir):
     assert thermo.geometry == "nonlinear"
     assert thermo.get_ZPE_correction() == pytest.approx(CH3_THERMO["ZPE"])
     assert thermo.get_enthalpy(1000) == pytest.approx(CH3_THERMO["enthalpy"])
-    assert thermo.get_entropy(1000, 1e8) == pytest.approx(CH3_THERMO["entropy"])
+    assert thermo.get_entropy(1e3, 1e8) == pytest.approx(CH3_THERMO["entropy"])
     assert thermo.get_gibbs_energy(1000, 1e8) == pytest.approx(
         thermo.get_enthalpy(1000) - 1000 * thermo.get_entropy(1000, 1e8)
     )
@@ -130,7 +132,7 @@ def test_ideal_gas_thermo_ch3_v2(testdir):
     assert thermo.geometry == "nonlinear"
     assert thermo.get_ZPE_correction() == pytest.approx(CH3_THERMO["ZPE"])
     assert thermo.get_enthalpy(1000) == pytest.approx(CH3_THERMO["enthalpy"])
-    assert thermo.get_entropy(1000, 1e8) == pytest.approx(CH3_THERMO["entropy"])
+    assert thermo.get_entropy(1e3, 1e8) == pytest.approx(CH3_THERMO["entropy"])
     assert thermo.get_gibbs_energy(1000, 1e8) == pytest.approx(
         thermo.get_enthalpy(1000) - 1000 * thermo.get_entropy(1000, 1e8)
     )
@@ -180,13 +182,29 @@ def test_ideal_gas_thermo_ch3_v3(testdir):
     ]
     with pytest.raises(ValueError):
         # Imaginary frequencies present!!!
-        thermo = ideal_gas_thermo_ch3(vib_energies=vib_energies)
+        ideal_gas_thermo_ch3(vib_energies=vib_energies)
+
+    with pytest.raises(ValueError):
+        # more than one imaginary mode present
+        IdealGasThermo.from_transition_state(vib_energies)
+    # this one should work with one imaginary mode
+    tmp = [vib_energies[3]] + vib_energies[7:]
+    thermo = IdealGasThermo.from_transition_state(tmp,
+                                                    geometry="nonlinear",
+                                                    atoms=None,
+                                                    symmetrynumber=6,
+                                                    potentialenergy=0.0,
+                                                    spin=0.5,
+                                                    imag_modes_handling='error')
+    # the same should not work when directly creating the class
+    with pytest.raises(ValueError):
+        ideal_gas_thermo_ch3(vib_energies=tmp)
 
     # Same as above, but let's try ignoring the
     # imag modes. This should just use: 507.9, 547.2, 547.7
     with pytest.warns(UserWarning):
         thermo = ideal_gas_thermo_ch3(vib_energies=vib_energies,
-                                      ignore_imag_modes=True)
+                                      imag_modes_handling='remove')
     assert list(thermo.vib_energies) == [507.9, 547.2, 547.7]
     assert thermo.n_imag == 3
 
@@ -237,12 +255,12 @@ VIB_ENERGIES_HARMONIC = np.array(
 def harmonic_thermo(
     vib_energies=None,
     potentialenergy=4.120517148154894,
-    ignore_imag_modes=False,
+    imag_modes_handling='error',
 ):
     return HarmonicThermo(
         vib_energies=vib_energies if vib_energies else VIB_ENERGIES_HARMONIC,
         potentialenergy=potentialenergy,
-        ignore_imag_modes=ignore_imag_modes,
+        imag_modes_handling=imag_modes_handling,
     )
 
 
@@ -277,7 +295,7 @@ def test_harmonic_thermo_v4(testdir):
     with pytest.warns(UserWarning):
         thermo = harmonic_thermo(
             vib_energies=list(VIB_ENERGIES_HARMONIC) + [10j],
-            ignore_imag_modes=True
+            imag_modes_handling='remove'
         )
     helmholtz = thermo.get_helmholtz_energy(temperature=298.15)
     assert helmholtz == pytest.approx(HELMHOLTZ_HARMONIC)
@@ -307,6 +325,110 @@ def test_crystal_thermo(asap3, testdir):
         formula_units=4,
     )
     thermo.get_helmholtz_energy(temperature=298.15)
+
+
+HELMHOLTZ_QUASI_HARMONIC = -0.04644196376152279
+
+
+def quasi_harmonic_thermo(
+    vib_energies=None,
+    potentialenergy=0.0,
+    imag_modes_handling=100 * units.invcm,
+    raise_to=100 * units.invcm
+):
+    return QuasiHarmonicThermo(
+        vib_energies=vib_energies if vib_energies else VIB_ENERGIES_HARMONIC,
+        potentialenergy=potentialenergy,
+        imag_modes_handling=imag_modes_handling,
+        raise_to=raise_to
+    )
+
+
+def test_quasi_harmonic_thermo():
+    "Basic test of quasi-harmonic thermochemistry"
+    thermo = quasi_harmonic_thermo()
+    helmholtz = thermo.get_helmholtz_energy(temperature=298.15)
+    assert helmholtz == pytest.approx(HELMHOLTZ_QUASI_HARMONIC)
+
+
+def test_quasi_harmonic_thermo_convergence():
+    "Basic test of quasi-harmonic to harmonic convergence thermochemistry"
+    thermo = harmonic_thermo(potentialenergy=0.0)
+    helmholtz_harm = thermo.get_helmholtz_energy(temperature=298.15)
+    thermo_quasi = quasi_harmonic_thermo(raise_to=0.0)
+    helmholtz_quasi = thermo_quasi.get_helmholtz_energy(temperature=298.15)
+    assert helmholtz_harm == pytest.approx(helmholtz_quasi)
+    # now also test that it actually changes when a higher value is used
+    thermo_quasi = quasi_harmonic_thermo(raise_to=1000 * units.invcm)
+    helmholtz_quasi = thermo_quasi.get_helmholtz_energy(temperature=298.15)
+    assert helmholtz_harm != pytest.approx(helmholtz_quasi)
+
+
+def msRRHO_thermo(
+    atoms=None,
+    tau=35,
+    vib_energies=None,
+    potentialenergy=0.0,
+    **kwargs
+):
+    return MSRRHOThermo(
+        atoms=atoms,
+        tau=tau,
+        vib_energies=vib_energies if vib_energies else VIB_ENERGIES_HARMONIC,
+        potentialenergy=potentialenergy,
+        **kwargs
+    )
+
+
+HELMHOLTZ_msRRHO = -0.05665130354741103
+HELMHOLTZ_msRRHO_internal_energy_treatment = -0.057760466601084096
+
+
+def test_msRRHO():
+    "Test proper functionality of msRRHO method"
+    thermo = msRRHO_thermo(atoms=Atoms('H'), tau=35)
+    helmholtz = thermo.get_helmholtz_energy(temperature=298.15)
+    assert helmholtz == pytest.approx(HELMHOLTZ_msRRHO)
+
+
+def test_msRRHO_enthalpy_treatment():
+    "Test proper functionality of msRRHO enthalpy method"
+    thermo = msRRHO_thermo(atoms=Atoms('H'), tau=35, treat_int_energy=True)
+    helmholtz = thermo.get_helmholtz_energy(temperature=298.15)
+    assert helmholtz == pytest.approx(
+        HELMHOLTZ_msRRHO_internal_energy_treatment)
+
+
+def test_msRRHO_converge_to_harmonic():
+    "Test that msRRHO converges to harmonic limit when tau is 0"
+    thermo = harmonic_thermo(potentialenergy=0.0)
+    helmholtz_harm = thermo.get_helmholtz_energy(temperature=298.15)
+    thermo_msrrho = msRRHO_thermo(atoms=Atoms('H'), tau=0)
+    helmholtz_msrrho = thermo_msrrho.get_helmholtz_energy(temperature=298.15)
+    assert helmholtz_harm == pytest.approx(helmholtz_msrrho)
+    # now also test that it actually changes when a higher tau is used
+    thermo_msrrho = msRRHO_thermo(atoms=Atoms('H'), tau=10)
+    helmholtz_msrrho = thermo_msrrho.get_helmholtz_energy(temperature=298.15)
+    assert helmholtz_harm != pytest.approx(helmholtz_msrrho)
+
+
+def test_msRRHO_scaling():
+    "Test proper functionality of the scaling factor in the msRRHO method"
+    tmp = np.multiply(VIB_ENERGIES_HARMONIC, 0.25)
+    thermo = harmonic_thermo(vib_energies=list(tmp), potentialenergy=0.0)
+    helmholtz_harm = thermo.get_helmholtz_energy(temperature=298.15)
+    thermo = msRRHO_thermo(atoms=Atoms('H'), tau=0, nu_scal=0.25)
+    helmholtz_msrrho = thermo.get_helmholtz_energy(temperature=298.15)
+    assert helmholtz_harm == pytest.approx(helmholtz_msrrho)
+
+
+def test_msRRHO_imag():
+    "Test that the result is the same if one of the modes is imaginary"
+    tmp = list(VIB_ENERGIES_HARMONIC)
+    tmp[0] *= 1.0j
+    thermo = msRRHO_thermo(atoms=Atoms('H'), tau=35, vib_energies=tmp)
+    helmholtz = thermo.get_helmholtz_energy(temperature=298.15)
+    assert helmholtz == pytest.approx(HELMHOLTZ_msRRHO)
 
 
 VIB_ENERGIES_HINDERED = (
@@ -352,7 +474,7 @@ def hindered_thermo(
     symmetrynumber=1,
     mass=30.07,
     inertia=73.149,
-    ignore_imag_modes=False,
+    imag_modes_handling='error',
 ):
     return HinderedThermo(
         atoms=atoms,
@@ -364,7 +486,7 @@ def hindered_thermo(
         symmetrynumber=symmetrynumber,
         mass=mass,
         inertia=inertia,
-        ignore_imag_modes=ignore_imag_modes,
+        imag_modes_handling=imag_modes_handling,
     )
 
 
@@ -401,7 +523,7 @@ def test_hindered_thermo3():
     with pytest.warns(UserWarning):
         thermo = hindered_thermo(
             vib_energies=list(VIB_ENERGIES_HINDERED) + [10j],
-            ignore_imag_modes=True
+            imag_modes_handling='remove'
         )
     assert thermo.get_helmholtz_energy(temperature=298.15) == pytest.approx(
         HELMHOLTZ_HINDERED
