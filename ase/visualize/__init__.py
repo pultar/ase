@@ -1,4 +1,7 @@
+# To avoid circular import
 import ase.parallel as parallel
+
+from .. import plugins  # NOQA: F401
 
 
 def view(atoms, data=None, viewer='ase', repeat=None, block=False, **kwargs):
