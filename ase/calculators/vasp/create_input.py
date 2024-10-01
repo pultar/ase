@@ -466,7 +466,7 @@ string_keys = [
     'localized_basis',  # Basis to use in CRPA
     'proutine',  # Select profiling routine
     'efermi',  # Sets the FERMI level in VASP 6.4.0+
-    'libxc1',  # MCML parameter 1 
+    'libxc1',  # MCML parameter 1
     'libxc2',  # MCML parameter 2
 ]
 
@@ -644,7 +644,7 @@ int_keys = [
     'qnl',  # Lanczos matrix size (instanton)
     'isol',  # vaspsol++ flag 1 linear, 2 nonlinear
     'nelmsw',  # After the first n steps, the setting functinoal begains to work
-    'nmetamix',  # Switch to conjugate gradients after n steps to help convergence
+    'nmetamix',  # Switch to conjugate gradients after n steps to help converge.
 ]
 
 bool_keys = [
