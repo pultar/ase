@@ -466,6 +466,8 @@ string_keys = [
     'localized_basis',  # Basis to use in CRPA
     'proutine',  # Select profiling routine
     'efermi',  # Sets the FERMI level in VASP 6.4.0+
+    'libxc1',  # MCML parameter 1
+    'libxc2',  # MCML parameter 2
 ]
 
 int_keys = [
@@ -641,6 +643,8 @@ int_keys = [
     'plevel',  # No timings for routines with "level" higher than this
     'qnl',  # Lanczos matrix size (instanton)
     'isol',  # vaspsol++ flag 1 linear, 2 nonlinear
+    'nelmsw',  # After the first n steps, the setting functinoal begains to work
+    'nmetamix',  # Switch to conjugate gradients after n steps to help converge.
 ]
 
 bool_keys = [
@@ -1053,6 +1057,11 @@ class GenerateVaspInput:
             # Alias for MBJ
             'metagga': 'MBJ',
         },
+        'mcml': {
+            'metagga': 'LIBXC',
+            'libxc1': 'MGGA_X_MCML',
+            'libxc2': 'GGA_C_REGTPSS',
+        },
         # vdW-DFs
         'vdw-df': {
             'gga': 'RE',
@@ -1109,6 +1118,13 @@ class GenerateVaspInput:
             'gga': 'BF',
             'luse_vdw': True,
             'zab_vdw': -1.8867
+        },
+        'vcml': {
+            'metagga': 'LIBXC',
+            'libxc1': 'MGGA_X_VCML',
+            'libxc2': 'GGA_C_REGTPSS',
+            'luse_vdw': True,
+            'bparam': 15.35,
         },
         # Hartree-Fock and hybrids
         'hf': {
