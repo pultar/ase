@@ -321,6 +321,8 @@ class GenericFileIOCalculator(BaseCalculator, GetOutputsMixin):
         )
 
     def calculate(self, atoms, properties, system_changes):
+        if atoms is not None:
+            self.atoms = atoms.copy()
         self.write_inputfiles(atoms, properties)
         self.template.execute(self.directory, self.profile)
         self.results = self.template.read_results(self.directory)
